@@ -7,6 +7,6 @@
     "css": "style.css",
     "author": "RovoDev",
     "version": "1.0.0",
-    "homePage": "https://github.com/rovodev/chyoa-navigator",
+    "homePage": "https://github.com/mershant/chyoa-navigator",
     "description": "Navigate and interact with CHYOA story extractions through configurable prompt templates"
 }
