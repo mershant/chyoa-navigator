@@ -144,30 +144,12 @@
     }
 }
 
-/* Scrollbar styling for webkit browsers */
-.chyoa-file-list::-webkit-scrollbar,
-.chyoa-preview::-webkit-scrollbar,
-.chyoa-preview-text::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chyoa-file-list::-webkit-scrollbar-track,
-.chyoa-preview::-webkit-scrollbar-track,
-.chyoa-preview-text::-webkit-scrollbar-track {
-    background: var(--SmartThemeBodyColor);
-}
-
-.chyoa-file-list::-webkit-scrollbar-thumb,
-.chyoa-preview::-webkit-scrollbar-thumb,
-.chyoa-preview-text::-webkit-scrollbar-thumb {
-    background: var(--SmartThemeBorderColor);
-    border-radius: 4px;
-}
-
-.chyoa-file-list::-webkit-scrollbar-thumb:hover,
-.chyoa-preview::-webkit-scrollbar-thumb:hover,
-.chyoa-preview-text::-webkit-scrollbar-thumb:hover {
-    background: var(--SmartThemeQuoteColor);
+/* Simplified scrollbar styling */
+.chyoa-file-list,
+.chyoa-preview,
+.chyoa-preview-text {
+    scrollbar-width: thin;
+    scrollbar-color: var(--SmartThemeBorderColor) var(--SmartThemeBodyColor);
 }
 
 /* Loading states */
