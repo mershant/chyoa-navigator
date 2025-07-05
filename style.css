@@ -1,0 +1,211 @@
+/* CHYOA Navigator Extension Styles */
+
+#chyoa-navigator {
+    padding: 10px;
+    background: var(--SmartThemeBodyColor);
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.chyoa-section {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: var(--SmartThemeBlurTintColor);
+    border-radius: 5px;
+    border: 1px solid var(--SmartThemeBorderColor);
+}
+
+.chyoa-section h4 {
+    margin: 0 0 10px 0;
+    color: var(--SmartThemeEmColor);
+    font-size: 14px;
+}
+
+/* File List Styles */
+.chyoa-file-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    background: var(--SmartThemeBodyColor);
+}
+
+.chyoa-file-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    transition: background-color 0.2s;
+}
+
+.chyoa-file-item:hover {
+    background: var(--SmartThemeBlurTintColor);
+}
+
+.chyoa-file-item.selected {
+    background: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+}
+
+.chyoa-file-item:last-child {
+    border-bottom: none;
+}
+
+.chyoa-file-name {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.chyoa-no-files {
+    padding: 20px;
+    text-align: center;
+    color: var(--SmartThemeQuoteColor);
+    font-style: italic;
+}
+
+/* Template Configuration Styles */
+.chyoa-template-config {
+    margin-top: 10px;
+}
+
+.chyoa-template-config label {
+    display: block;
+    margin: 10px 0 5px 0;
+    font-weight: bold;
+    color: var(--SmartThemeEmColor);
+    font-size: 12px;
+}
+
+.chyoa-template-config textarea {
+    width: 100%;
+    min-height: 60px;
+    resize: vertical;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+/* Preview Styles */
+.chyoa-preview {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    background: var(--SmartThemeBodyColor);
+}
+
+.chyoa-preview-section {
+    padding: 10px;
+}
+
+.chyoa-preview-text {
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 10px 0 0 0;
+    padding: 10px;
+    background: var(--SmartThemeBlurTintColor);
+    border-radius: 3px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.chyoa-no-content {
+    padding: 20px;
+    text-align: center;
+    color: var(--SmartThemeQuoteColor);
+    font-style: italic;
+}
+
+/* Button Styles */
+.chyoa-section .menu_button {
+    margin: 2px;
+    font-size: 12px;
+}
+
+.chyoa-section .flex-container {
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.chyoa-section .text_pole {
+    font-size: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chyoa-section .flex-container {
+        flex-direction: column;
+    }
+    
+    .chyoa-section .menu_button {
+        width: 100%;
+    }
+}
+
+/* Scrollbar styling for webkit browsers */
+.chyoa-file-list::-webkit-scrollbar,
+.chyoa-preview::-webkit-scrollbar,
+.chyoa-preview-text::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chyoa-file-list::-webkit-scrollbar-track,
+.chyoa-preview::-webkit-scrollbar-track,
+.chyoa-preview-text::-webkit-scrollbar-track {
+    background: var(--SmartThemeBodyColor);
+}
+
+.chyoa-file-list::-webkit-scrollbar-thumb,
+.chyoa-preview::-webkit-scrollbar-thumb,
+.chyoa-preview-text::-webkit-scrollbar-thumb {
+    background: var(--SmartThemeBorderColor);
+    border-radius: 4px;
+}
+
+.chyoa-file-list::-webkit-scrollbar-thumb:hover,
+.chyoa-preview::-webkit-scrollbar-thumb:hover,
+.chyoa-preview-text::-webkit-scrollbar-thumb:hover {
+    background: var(--SmartThemeQuoteColor);
+}
+
+/* Loading states */
+.chyoa-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.chyoa-loading::after {
+    content: "Loading...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--SmartThemeBodyColor);
+    padding: 10px;
+    border-radius: 3px;
+    border: 1px solid var(--SmartThemeBorderColor);
+}
+
+/* Error states */
+.chyoa-error {
+    color: #ff6b6b;
+    font-style: italic;
+    padding: 10px;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: 3px;
+    margin: 5px 0;
+}
+
+/* Success states */
+.chyoa-success {
+    color: #51cf66;
+    font-style: italic;
+    padding: 10px;
+    background: rgba(81, 207, 102, 0.1);
+    border: 1px solid rgba(81, 207, 102, 0.3);
+    border-radius: 3px;
+    margin: 5px 0;
+}
