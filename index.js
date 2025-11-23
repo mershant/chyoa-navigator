@@ -4,12 +4,6 @@ import { saveSettingsDebounced } from "../../../../script.js";
 
 // Extension name MUST match folder name
 const extensionName = "chyoa-navigator";
-// Import from SillyTavern core
-import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
-import { saveSettingsDebounced } from "../../../../script.js";
-
-// Extension name MUST match folder name
-const extensionName = "chyoa-navigator";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 // Default settings
