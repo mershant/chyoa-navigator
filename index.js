@@ -4,8 +4,9 @@ import { saveSettingsDebounced } from "../../../../script.js";
 
 // Extension name MUST match folder name
 const extensionName = "chyoa-navigator";
-// Dynamically determine the path to ensure it works regardless of folder name
-const extensionFolderPath = import.meta.url.substring(0, import.meta.url.lastIndexOf('/'));
+const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+
+console.log(`[${extensionName}] Script loaded! Checking for HTML at ${extensionFolderPath}/example.html`);
 
 // Default settings
 const defaultSettings = {
