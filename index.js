@@ -1,18 +1,12 @@
 // Import from SillyTavern core
 import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
-import { saveSettingsDebounced, eventSource } from "../../../../script.js";
+import { saveSettingsDebounced } from "../../../../script.js";
 
 // Extension name MUST match folder name
 const extensionName = "chyoa-navigator";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-console.log(`[${extensionName}] Script loaded! Checking for HTML at ${extensionFolderPath}/example.html`);
-
-// DIAGNOSTICS
-console.log(`[${extensionName}] Checking APIs:`);
-console.log(`[${extensionName}] extension_prompt_types type:`, typeof extension_prompt_types);
-console.log(`[${extensionName}] window.extension_prompt_types type:`, typeof window.extension_prompt_types);
-console.log(`[${extensionName}] eventSource type:`, typeof eventSource);
+console.log(`[${extensionName}] Script loaded!`);
 
 // Default settings
 const defaultSettings = {
@@ -22,7 +16,8 @@ const defaultSettings = {
     modification_text: "",
     separate_protagonist: false,
     selected_text: "",
-    injection_position: "after_story"
+    injection_depth: 1,
+    injection_position: 2 // After Main Prompt
 };
 
 async function loadSettings() {
@@ -40,7 +35,7 @@ async function loadSettings() {
     $("#ooc_post").val(extension_settings[extensionName].ooc_post || "");
     $("#modification_text").val(extension_settings[extensionName].modification_text || "");
     $("#separate_protagonist").prop("checked", extension_settings[extensionName].separate_protagonist || false);
-    $("#injection_position").val(extension_settings[extensionName].injection_position || "after_story");
+    $("#injection_depth").val(extension_settings[extensionName].injection_depth || 1);
 
     // Restore selection preview
     const savedSelection = extension_settings[extensionName].selected_text || "";
@@ -66,6 +61,9 @@ function onInput(event) {
     // Save to extension settings
     extension_settings[extensionName][id] = value;
     saveSettingsDebounced();
+
+    // Refresh injection whenever settings change
+    refreshInjection();
 }
 
 function onTextSelect(event) {
@@ -80,6 +78,9 @@ function onTextSelect(event) {
         updateSelectionPreview(selectedText);
         saveSettingsDebounced();
         console.log(`[${extensionName}] Text selected:`, selectedText.substring(0, 20) + "...");
+
+        // Refresh injection
+        refreshInjection();
     }
 }
 
@@ -118,6 +119,34 @@ function constructPrompt() {
     return prompt;
 }
 
+// Refresh the injection using setExtensionPrompt
+function refreshInjection() {
+    const ctx = getContext();
+    const prompt = constructPrompt();
+    const settings = extension_settings[extensionName];
+
+    if (prompt) {
+        console.log(`[${extensionName}] Injecting prompt (${prompt.length} chars)`);
+
+        // Use setExtensionPrompt: (id, text, position, depth, scan, role)
+        // position: 0 = before main, 1 = after main, 2 = after examples, etc.
+        // depth: how many messages from the end to inject at
+        // scan: whether to scan for keywords
+        // role: 'system' or 'user'
+        ctx.setExtensionPrompt(
+            extensionName,
+            prompt,
+            settings.injection_position || 2,  // After Main Prompt
+            settings.injection_depth || 1,      // Depth 1
+            false,                               // No scan
+            'system'                             // System role
+        );
+    } else {
+        console.log(`[${extensionName}] Clearing injection (no text selected)`);
+        ctx.setExtensionPrompt(extensionName, "", 0, 0, false, 'system');
+    }
+}
+
 // Test button handler
 function onTestInjection() {
     const prompt = constructPrompt();
@@ -126,45 +155,6 @@ function onTestInjection() {
         alert("Prompt generated! Check the Browser Console (F12) to see the full injected text.");
     } else {
         alert("No prompt generated. Make sure you have text selected in the Source Text box.");
-    }
-}
-
-// Event listener for payload modification
-function onChatCompletionPayloadReady(data) {
-    console.log(`[${extensionName}] Payload ready event triggered!`);
-    const promptToInject = constructPrompt();
-
-    if (!promptToInject) {
-        console.log(`[${extensionName}] Nothing to inject.`);
-        return;
-    }
-
-    // Check if we are dealing with a Chat Completion (messages array) or Text Completion (prompt string)
-    if (data.body.messages && Array.isArray(data.body.messages)) {
-        console.log(`[${extensionName}] Injecting into messages array (Chat Completion)`);
-
-        // Inject as a System message at the end (or near end) to ensure it's seen as a current instruction
-        // or adhere to the "depth" logic if we implemented it. For now, let's append as a System message.
-        // Usually, putting it right before the last user message is good, or at the very end.
-        // Let's put it at the very end as a System message for maximum effect (OOC).
-
-        data.body.messages.push({
-            role: "system",
-            content: promptToInject
-        });
-
-        console.log(`[${extensionName}] Injected system message:\n`, promptToInject);
-    }
-    else if (data.body.prompt && typeof data.body.prompt === "string") {
-        console.log(`[${extensionName}] Injecting into prompt string (Text Completion)`);
-
-        // Just append it to the prompt
-        data.body.prompt += "\n\n" + promptToInject;
-
-        console.log(`[${extensionName}] Appended to prompt string.`);
-    }
-    else {
-        console.warn(`[${extensionName}] Unknown payload format. Could not inject.`);
     }
 }
 
@@ -190,7 +180,7 @@ jQuery(async () => {
         $("#ooc_post").on("input", onInput);
         $("#modification_text").on("input", onInput);
         $("#separate_protagonist").on("input", onInput);
-        $("#injection_position").on("input", onInput);
+        $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
 
         // Bind selection event
@@ -199,13 +189,8 @@ jQuery(async () => {
         // Load saved settings
         loadSettings();
 
-        // Register Event Listener for Injection
-        if (eventSource) {
-            eventSource.on('chat_completion_payload_ready', onChatCompletionPayloadReady);
-            console.log(`[${extensionName}] Event listener registered: chat_completion_payload_ready`);
-        } else {
-            console.error(`[${extensionName}] eventSource not found! Injection will not work.`);
-        }
+        // Initial injection refresh
+        refreshInjection();
 
         console.log(`[${extensionName}] ✅ Loaded successfully`);
     } catch (error) {
