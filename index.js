@@ -274,9 +274,19 @@ function jumpToSelection() {
         textarea.focus();
         textarea.setSelectionRange(start, end);
 
-        // Calculate dynamic line height for better accuracy
-        const totalLines = textarea.value.split('\n').length;
-        const lineHeight = (textarea.scrollHeight / totalLines) || 20;
+        // Calculate dynamic line height more robustly
+        // The scrollHeight/totalLines method is unreliable, so we measure actual font height
+        let lineHeight = 20; // Default fallback
+        const tempDiv = document.createElement('div');
+        tempDiv.style.font = window.getComputedStyle(textarea).font;
+        tempDiv.style.visibility = 'hidden';
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '-9999px';
+        tempDiv.innerHTML = 'A'; // Single line of text
+        document.body.appendChild(tempDiv);
+        lineHeight = tempDiv.clientHeight || 20;
+        document.body.removeChild(tempDiv);
 
         // Calculate line numbers
         const beforeText = textarea.value.substring(0, start);
