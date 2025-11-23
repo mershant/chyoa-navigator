@@ -75,10 +75,17 @@ function onTextSelect(event) {
 
 // Construct the prompt to be injected
 function constructPrompt() {
+    console.log(`[${extensionName}] constructPrompt called`);
     const settings = extension_settings[extensionName];
+
+    if (!settings) {
+        console.warn(`[${extensionName}] Settings not found during prompt construction`);
+        return "";
+    }
 
     // If no selection, don't inject anything
     if (!settings.selected_text) {
+        console.log(`[${extensionName}] No text selected, skipping injection`);
         return "";
     }
 
@@ -105,6 +112,9 @@ function constructPrompt() {
 
     // Close the OOC2 block
     prompt += "]";
+
+    console.log(`[${extensionName}] Injecting prompt length: ${prompt.length}`);
+    console.log(`[${extensionName}] Prompt content preview: ${prompt.substring(0, 50)}...`);
 
     return prompt;
 }
