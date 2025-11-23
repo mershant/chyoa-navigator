@@ -114,12 +114,38 @@ function refreshUI() {
 
 function updateSelectionPreview(text) {
     const previewEl = $("#selection_preview");
+    const infoEl = $("#selection_info");
+
     if (text) {
         previewEl.text(text);
         previewEl.css("color", "#fff");
+
+        // Update position info
+        const start = getChatMetadata('selection_start', 0);
+        const end = getChatMetadata('selection_end', 0);
+        const sourceText = $("#source_text").val() || '';
+
+        // Calculate line numbers
+        const beforeText = sourceText.substring(0, start);
+        const startLine = beforeText.split('\n').length;
+        const selectedLines = text.split('\n').length;
+        const endLine = startLine + selectedLines - 1;
+
+        // Calculate word count
+        const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+        // Display info
+        const charInfo = `Chars ${start}-${end} (${text.length} selected)`;
+        const lineInfo = startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`;
+        const wordInfo = `${wordCount} words`;
+
+        infoEl.html(`${charInfo} • ${lineInfo} • ${wordInfo}`);
+        infoEl.css("color", "#bbb");
     } else {
         previewEl.text("(No text selected)");
         previewEl.css("color", "#aaa");
+        infoEl.text("No selection");
+        infoEl.css("color", "#888");
     }
 }
 
