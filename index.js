@@ -245,46 +245,86 @@ function undoSelection() {
     refreshInjection();
 }
 
-const settings = extension_settings[extensionName];
+// Jump to selection - scroll to current selection in textarea
+function jumpToSelection() {
+    const start = getChatMetadata('selection_start', 0);
+    const end = getChatMetadata('selection_end', 0);
+    const selectedText = getChatMetadata('selected_text', '');
 
-// Try to get selected text from chat metadata first, fallback to extension settings
-let selectedText = getChatMetadata('selected_text', '');
-if (!selectedText) {
-    selectedText = settings.selected_text || '';
+    if (!selectedText) {
+        toastr.warning('No selection to jump to');
+        return;
+    }
+
+    const textarea = document.getElementById('source_text');
+    if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+
+        // Calculate dynamic line height for better accuracy
+        const totalLines = textarea.value.split('\n').length;
+        const lineHeight = (textarea.scrollHeight / totalLines) || 20;
+
+        // Calculate line numbers
+        const beforeText = textarea.value.substring(0, start);
+        const startLine = beforeText.split('\n').length;
+        const selectedLines = selectedText.split('\n').length;
+        const endLine = startLine + selectedLines - 1;
+
+        // Position selection at CENTER of viewport (50% down)
+        const textareaHeight = textarea.clientHeight;
+        const visibleLines = Math.floor(textareaHeight / lineHeight);
+
+        // Scroll so the END of selection is in the middle of the screen
+        const targetLine = endLine - Math.floor(visibleLines * 0.5);
+        textarea.scrollTop = Math.max(0, targetLine * lineHeight);
+
+        toastr.info('Jumped to selection');
+    }
 }
 
-if (!settings || !selectedText) {
-    return "";
-}
+// Construct the prompt to be injected
+function constructPrompt() {
+    const settings = extension_settings[extensionName];
 
-let prompt = "";
+    // Try to get selected text from chat metadata first, fallback to extension settings
+    let selectedText = getChatMetadata('selected_text', '');
+    if (!selectedText) {
+        selectedText = settings.selected_text || '';
+    }
 
-// 1. Pre-Prompt (OOC1)
-prompt += settings.ooc_pre + "\n";
+    if (!settings || !selectedText) {
+        return "";
+    }
 
-// 2. Selected Text wrapped in simulate tags
-prompt += selectedText + "\n";
+    let prompt = "";
 
-// 3. Post-Prompt (OOC2)
-prompt += settings.ooc_post + "\n";
+    // 1. Pre-Prompt (OOC1)
+    prompt += settings.ooc_pre + "\n";
 
-// 4. Manual Modifications
-if (settings.modification_text) {
-    prompt += settings.modification_text + "\n";
-}
+    // 2. Selected Text wrapped in simulate tags
+    prompt += selectedText + "\n";
 
-// 5. Toggles
-if (settings.separate_protagonist) {
-    const protagonistName = settings.protagonist_name || "the protagonist";
-    prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
-    prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
-    prompt += "- {{user}} may be present as a secondary character or observer.";
-}
+    // 3. Post-Prompt (OOC2)
+    prompt += settings.ooc_post + "\n";
 
-// Close with bracket
-prompt += "\n]";
+    // 4. Manual Modifications
+    if (settings.modification_text) {
+        prompt += settings.modification_text + "\n";
+    }
 
-return prompt;
+    // 5. Toggles
+    if (settings.separate_protagonist) {
+        const protagonistName = settings.protagonist_name || "the protagonist";
+        prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
+        prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
+        prompt += "- {{user}} may be present as a secondary character or observer.";
+    }
+
+    // Close with bracket
+    prompt += "\n]";
+
+    return prompt;
 }
 
 // Refresh the injection using setExtensionPrompt
