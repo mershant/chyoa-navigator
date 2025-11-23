@@ -274,14 +274,35 @@ function jumpToSelection() {
         textarea.focus();
         textarea.setSelectionRange(start, end);
 
-        // Use character position for scroll ratio (works better than line count)
-        const totalChars = textarea.value.length;
-        const scrollRatio = end / totalChars;
+        // Use a more reliable scrolling method for text with no line breaks
+        // Create a temporary span to measure the pixel position of the selection
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: ${textarea.clientWidth}px;
+            font: ${window.getComputedStyle(textarea).font};
+            line-height: ${window.getComputedStyle(textarea).lineHeight};
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        `;
+        
+        // Split text into before selection and selection
+        const beforeSelection = textarea.value.substring(0, end);
+        tempDiv.textContent = beforeSelection;
+        document.body.appendChild(tempDiv);
+        
+        // Get the pixel height of the text before the selection end
+        const pixelHeight = tempDiv.offsetHeight;
+        document.body.removeChild(tempDiv);
+        
+        // Calculate scroll position to center the selection
         const maxScroll = textarea.scrollHeight - textarea.clientHeight;
-        // Position so the end of selection is visible with some context after it
-        // Scroll to about 15% before the end of selection
-        const targetScrollRatio = Math.max(0, scrollRatio - 0.15);
-        const targetScroll = targetScrollRatio * maxScroll;
+        // Position so the selection is centered in the viewport
+        const targetScroll = Math.max(0, pixelHeight - (textarea.clientHeight / 2));
+        
         textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
         
         // Calculate line numbers for display
@@ -290,7 +311,7 @@ function jumpToSelection() {
         const selectedLines = selectedText.split('\n').length;
         const endLine = startLine + selectedLines - 1;
         
-        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, char ${end}/${totalChars} (${(scrollRatio*100).toFixed(1)}%), targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
+        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, pixelHeight: ${pixelHeight}, targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
     }
 }
 
