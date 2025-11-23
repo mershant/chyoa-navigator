@@ -411,13 +411,13 @@ jQuery(async () => {
         $("#enable_toggle").on("change", toggleEnabled);
         $("#source_text").on("input", onInput);
         $("#ooc_pre").on("input", onInput);
-        $("#source_text").on("mouseup keyup", onTextSelect);
-
-        // Load saved settings
-        loadSettings();
-
-        // Initial injection refresh
-        refreshInjection();
+        $("#ooc_post").on("input", onInput);
+        $("#modification_text").on("input", onInput);
+        $("#separate_protagonist").on("input", onInput);
+        $("#isekai_mode").on("input", onInput);
+        $("#protagonist_name").on("input", onInput);
+        $("#injection_depth").on("input", onInput);
+        $("#test_injection_btn").on("click", onTestInjection);
 
         // Register event listeners
         eventSource.on(event_types.MESSAGE_RECEIVED, refreshInjection);
