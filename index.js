@@ -289,8 +289,8 @@ function jumpToSelection() {
         const visibleLines = Math.floor(textareaHeight / lineHeight);
 
         // Scroll so the END of selection is in the middle of the screen
-        const targetLine = endLine - Math.floor(visibleLines * 0.5);
-        textarea.scrollTop = Math.max(0, targetLine * lineHeight);
+        const targetScroll = (endLine * lineHeight) - (textareaHeight / 2);
+        textarea.scrollTop = Math.max(0, targetScroll);
 
         toastr.info('Jumped to selection');
     }
@@ -411,17 +411,6 @@ jQuery(async () => {
         $("#enable_toggle").on("change", toggleEnabled);
         $("#source_text").on("input", onInput);
         $("#ooc_pre").on("input", onInput);
-        $("#ooc_post").on("input", onInput);
-        $("#modification_text").on("input", onInput);
-        $("#separate_protagonist").on("input", onInput);
-        $("#isekai_mode").on("input", onInput);
-        $("#protagonist_name").on("input", onInput);
-        $("#injection_depth").on("input", onInput);
-        $("#test_injection_btn").on("click", onTestInjection);
-        $("#undo_selection_btn").on("click", undoSelection);
-        $("#jump_to_selection_btn").on("click", jumpToSelection);
-
-        // Bind selection event
         $("#source_text").on("mouseup keyup", onTextSelect);
 
         // Load saved settings
