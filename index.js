@@ -284,12 +284,15 @@ function jumpToSelection() {
         const selectedLines = selectedText.split('\n').length;
         const endLine = startLine + selectedLines - 1;
 
-        // Position selection at CENTER of viewport (50% down)
+        // Position the END of selection near the top of viewport (1/3 down)
+        // This lets you see both the end of your selection and what comes next
         const textareaHeight = textarea.clientHeight;
-        const visibleLines = Math.floor(textareaHeight / lineHeight);
 
-        // Scroll so the END of selection is in the middle of the screen
-        const targetScroll = (endLine * lineHeight) - (textareaHeight / 2);
+        // Convert line number (1-indexed) to pixel position (0-indexed)
+        const endLinePixelPosition = (endLine - 1) * lineHeight;
+
+        // Scroll so the END of selection appears 1/3 down from the top
+        const targetScroll = endLinePixelPosition - (textareaHeight / 3);
         textarea.scrollTop = Math.max(0, targetScroll);
 
         toastr.info('Jumped to selection');
