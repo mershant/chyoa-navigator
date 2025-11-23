@@ -163,15 +163,15 @@ function onTextSelect(event) {
 
 // Construct the prompt to be injected
 function constructPrompt() {
-    // Don't inject if disabled
-    if (!isEnabled()) {
-        return "";
+    const settings = extension_settings[extensionName];
+
+    // Try to get selected text from chat metadata first, fallback to extension settings
+    let selectedText = getChatMetadata('selected_text', '');
+    if (!selectedText) {
+        selectedText = settings.selected_text || '';
     }
 
-    const settings = extension_settings[extensionName];
-    const selectedText = getChatMetadata('selected_text', '');
-
-    if (!selectedText) {
+    if (!settings || !selectedText) {
         return "";
     }
 
