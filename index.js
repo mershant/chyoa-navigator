@@ -1,6 +1,6 @@
 // Import from SillyTavern core
-import { extension_settings, getContext, chat_metadata, saveMetadataDebounced } from "../../../extensions.js";
-import { saveSettingsDebounced, event_types, eventSource, extension_prompt_types } from "../../../../script.js";
+import { extension_settings, getContext, saveMetadataDebounced } from "../../../extensions.js";
+import { saveSettingsDebounced, event_types, eventSource, extension_prompt_types, chat_metadata } from "../../../../script.js";
 
 // Extension name MUST match folder name
 const extensionName = "chyoa-navigator";
