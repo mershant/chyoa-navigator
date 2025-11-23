@@ -245,73 +245,46 @@ function undoSelection() {
     refreshInjection();
 }
 
-// Jump to selection - scroll to current selection in textarea
-function jumpToSelection() {
-    const start = getChatMetadata('selection_start', 0);
-    const end = getChatMetadata('selection_end', 0);
-    const selectedText = getChatMetadata('selected_text', '');
+const settings = extension_settings[extensionName];
 
-    if (!selectedText) {
-        toastr.warning('No selection to jump to');
-        return;
-    }
-
-    const textarea = document.getElementById('source_text');
-    if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(start, end);
-
-        // Scroll to show the selection
-        const lines = textarea.value.substring(0, start).split('\n').length;
-        const lineHeight = 20; // approximate
-        textarea.scrollTop = Math.max(0, (lines - 5) * lineHeight);
-
-        toastr.info('Jumped to selection');
-    }
+// Try to get selected text from chat metadata first, fallback to extension settings
+let selectedText = getChatMetadata('selected_text', '');
+if (!selectedText) {
+    selectedText = settings.selected_text || '';
 }
 
-// Construct the prompt to be injected
-function constructPrompt() {
-    const settings = extension_settings[extensionName];
+if (!settings || !selectedText) {
+    return "";
+}
 
-    // Try to get selected text from chat metadata first, fallback to extension settings
-    let selectedText = getChatMetadata('selected_text', '');
-    if (!selectedText) {
-        selectedText = settings.selected_text || '';
-    }
+let prompt = "";
 
-    if (!settings || !selectedText) {
-        return "";
-    }
+// 1. Pre-Prompt (OOC1)
+prompt += settings.ooc_pre + "\n";
 
-    let prompt = "";
+// 2. Selected Text wrapped in simulate tags
+prompt += selectedText + "\n";
 
-    // 1. Pre-Prompt (OOC1)
-    prompt += settings.ooc_pre + "\n";
+// 3. Post-Prompt (OOC2)
+prompt += settings.ooc_post + "\n";
 
-    // 2. Selected Text wrapped in simulate tags
-    prompt += selectedText + "\n";
+// 4. Manual Modifications
+if (settings.modification_text) {
+    prompt += settings.modification_text + "\n";
+}
 
-    // 3. Post-Prompt (OOC2)
-    prompt += settings.ooc_post + "\n";
+// 5. Toggles
+if (settings.separate_protagonist) {
+    const protagonistName = settings.protagonist_name || "the protagonist";
+    prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
+    prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
+    prompt += "- {{user}} may be present as a secondary character or observer.";
+}
 
-    // 4. Manual Modifications
-    if (settings.modification_text) {
-        prompt += settings.modification_text + "\n";
-    }
+// Close with bracket
+prompt += "\n]";
 
-    // 5. Toggles
-    if (settings.separate_protagonist) {
-        const protagonistName = settings.protagonist_name || "the protagonist";
-        prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
-        prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
-        prompt += "- {{user}} may be present as a secondary character or observer.";
-    }
-
-    // Close with bracket
-    prompt += "\n]";
-
-    return prompt;
+return prompt;
 }
 
 // Refresh the injection using setExtensionPrompt
