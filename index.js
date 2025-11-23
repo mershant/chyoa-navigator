@@ -368,7 +368,7 @@ function constructPrompt() {
             return prompt;
         }
 
-        // Refresh the injection using setExtensionPrompt
+        // Refresh the injection using setExtensionPrompt - Proper context injection
         function refreshInjection() {
             const ctx = getContext();
             const prompt = constructPrompt();
@@ -378,17 +378,16 @@ function constructPrompt() {
                 console.log(`[${extensionName}] Injecting prompt (${prompt.length} chars)`);
                 console.log(`[${extensionName}] Prompt preview:`, prompt.substring(0, 100) + "...");
 
+                // Proper context injection using IN_CHAT type for better integration
                 ctx.setExtensionPrompt(
                     extensionName,
                     prompt,
-                    extension_prompt_types.IN_PROMPT,
-                    settings.injection_depth || 4,
-                    false,
-                    'system'
+                    extension_prompt_types.IN_CHAT,
+                    settings.injection_depth || 4
                 );
             } else {
                 console.log(`[${extensionName}] Clearing injection (disabled or no text selected)`);
-                ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.IN_PROMPT, 0, false, 'system');
+                ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.NONE, 0);
             }
         }
 
