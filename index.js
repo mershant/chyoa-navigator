@@ -245,6 +245,31 @@ function undoSelection() {
     refreshInjection();
 }
 
+// Jump to selection - scroll to current selection in textarea
+function jumpToSelection() {
+    const start = getChatMetadata('selection_start', 0);
+    const end = getChatMetadata('selection_end', 0);
+    const selectedText = getChatMetadata('selected_text', '');
+
+    if (!selectedText) {
+        toastr.warning('No selection to jump to');
+        return;
+    }
+
+    const textarea = document.getElementById('source_text');
+    if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
+
+        // Scroll to show the selection
+        const lines = textarea.value.substring(0, start).split('\n').length;
+        const lineHeight = 20; // approximate
+        textarea.scrollTop = Math.max(0, (lines - 5) * lineHeight);
+
+        toastr.info('Jumped to selection');
+    }
+}
+
 // Construct the prompt to be injected
 function constructPrompt() {
     const settings = extension_settings[extensionName];
@@ -358,6 +383,7 @@ jQuery(async () => {
         $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
         $("#undo_selection_btn").on("click", undoSelection);
+        $("#jump_to_selection_btn").on("click", jumpToSelection);
 
         // Bind selection event
         $("#source_text").on("mouseup keyup", onTextSelect);
