@@ -8,6 +8,9 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 console.log(`[${extensionName}] Script loaded!`);
 
+// Selection history for undo functionality (max 10 items)
+let selectionHistory = [];
+
 // Default settings (global - apply to all chats)
 const defaultSettings = {
     ooc_pre: "[SEQUENCE SIMULATION: The following text describes a MANDATORY sequence of events that MUST occur in the story. These events are NON-NEGOTIABLE and should happen in the order presented, but they may be adapted to incorporate {{user}}'s modifications (e.g., different characters, added details, new dialogue).\n\nPOINT OF INTEREST:\n<simulate>",
@@ -152,13 +155,68 @@ function onTextSelect(event) {
     // Only update if there is a selection
     if (start !== end) {
         const selectedText = textarea.value.substring(start, end);
+
+        // Save current selection to history before updating (for undo)
+        const currentSelection = getChatMetadata('selected_text', '');
+        if (currentSelection && currentSelection !== selectedText) {
+            const currentStart = getChatMetadata('selection_start', 0);
+            const currentEnd = getChatMetadata('selection_end', 0);
+
+            selectionHistory.push({
+                text: currentSelection,
+                start: currentStart,
+                end: currentEnd,
+                timestamp: Date.now()
+            });
+
+            // Keep only last 10 selections
+            if (selectionHistory.length > 10) {
+                selectionHistory.shift();
+            }
+        }
+
+        // Save new selection
         setChatMetadata('selected_text', selectedText);
+        setChatMetadata('selection_start', start);
+        setChatMetadata('selection_end', end);
         updateSelectionPreview(selectedText);
         console.log(`[${extensionName}] Text selected:`, selectedText.substring(0, 20) + "...");
 
-        // Refresh injection
-        refreshInjection();
     }
+}
+
+// Undo selection - restore previous selection from history
+function undoSelection() {
+    if (selectionHistory.length === 0) {
+        toastr.warning('No previous selection to undo');
+        return;
+    }
+
+    const previous = selectionHistory.pop();
+
+    // Restore the previous selection
+    setChatMetadata('selected_text', previous.text);
+    setChatMetadata('selection_start', previous.start);
+    setChatMetadata('selection_end', previous.end);
+    updateSelectionPreview(previous.text);
+
+    // Re-highlight in textarea
+    const textarea = document.getElementById('source_text');
+    if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(previous.start, previous.end);
+
+        // Scroll to show the selection
+        const lines = textarea.value.substring(0, previous.start).split('\n').length;
+        const lineHeight = 20; // approximate
+        textarea.scrollTop = Math.max(0, (lines - 5) * lineHeight);
+    }
+
+    toastr.success('Selection restored');
+    console.log(`[${extensionName}] Undo: restored selection (${previous.text.substring(0, 20)}...)`);
+
+    // Refresh injection
+    refreshInjection();
 }
 
 // Construct the prompt to be injected
@@ -273,6 +331,7 @@ jQuery(async () => {
         $("#protagonist_name").on("input", onInput);
         $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
+        $("#undo_selection_btn").on("click", undoSelection);
 
         // Bind selection event
         $("#source_text").on("mouseup keyup", onTextSelect);
