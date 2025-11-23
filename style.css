@@ -1,1 +1,8 @@
-/* Empty for now - add styles later */
+/* Visual feedback when extension is disabled */
+.chyoa-navigator-settings.disabled-extension {
+    opacity: 0.6;
+}
+
+.chyoa-navigator-settings.disabled-extension .inline-drawer-content>div:not(:first-child) {
+    pointer-events: none;
+}
