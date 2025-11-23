@@ -1,6 +1,6 @@
 // Import from SillyTavern core
 import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
-import { saveSettingsDebounced } from "../../../../script.js";
+import { saveSettingsDebounced, eventSource } from "../../../../script.js";
 
 // Extension name MUST match folder name
 const extensionName = "chyoa-navigator";
@@ -79,17 +79,9 @@ function onTextSelect(event) {
 
 // Construct the prompt to be injected
 function constructPrompt() {
-    console.log(`[${extensionName}] constructPrompt called`);
     const settings = extension_settings[extensionName];
 
-    if (!settings) {
-        console.warn(`[${extensionName}] Settings not found during prompt construction`);
-        return "";
-    }
-
-    // If no selection, don't inject anything
-    if (!settings.selected_text) {
-        console.log(`[${extensionName}] No text selected, skipping injection`);
+    if (!settings || !settings.selected_text) {
         return "";
     }
 
@@ -117,8 +109,6 @@ function constructPrompt() {
     // Close the OOC2 block
     prompt += "]";
 
-    console.log(`[${extensionName}] Injecting prompt length: ${prompt.length}`);
-
     return prompt;
 }
 
@@ -133,6 +123,45 @@ function onTestInjection() {
     }
 }
 
+// Event listener for payload modification
+function onChatCompletionPayloadReady(data) {
+    console.log(`[${extensionName}] Payload ready event triggered!`);
+    const promptToInject = constructPrompt();
+
+    if (!promptToInject) {
+        console.log(`[${extensionName}] Nothing to inject.`);
+        return;
+    }
+
+    // Check if we are dealing with a Chat Completion (messages array) or Text Completion (prompt string)
+    if (data.body.messages && Array.isArray(data.body.messages)) {
+        console.log(`[${extensionName}] Injecting into messages array (Chat Completion)`);
+
+        // Inject as a System message at the end (or near end) to ensure it's seen as a current instruction
+        // or adhere to the "depth" logic if we implemented it. For now, let's append as a System message.
+        // Usually, putting it right before the last user message is good, or at the very end.
+        // Let's put it at the very end as a System message for maximum effect (OOC).
+
+        data.body.messages.push({
+            role: "system",
+            content: promptToInject
+        });
+
+        console.log(`[${extensionName}] Injected system message:\n`, promptToInject);
+    }
+    else if (data.body.prompt && typeof data.body.prompt === "string") {
+        console.log(`[${extensionName}] Injecting into prompt string (Text Completion)`);
+
+        // Just append it to the prompt
+        data.body.prompt += "\n\n" + promptToInject;
+
+        console.log(`[${extensionName}] Appended to prompt string.`);
+    }
+    else {
+        console.warn(`[${extensionName}] Unknown payload format. Could not inject.`);
+    }
+}
+
 // Extension initialization
 jQuery(async () => {
     console.log(`[${extensionName}] Loading...`);
@@ -141,12 +170,12 @@ jQuery(async () => {
         // Load HTML from file
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
 
-        // Remove existing drawer if present to prevent duplicates (using ID for safety)
+        // Remove existing drawer if present
         $("#chyoa-navigator-drawer").remove();
-        $(".chyoa-navigator-settings").remove(); // Fallback
-        $(".story-modifier-settings").remove(); // Cleanup old versions
+        $(".chyoa-navigator-settings").remove();
+        $(".story-modifier-settings").remove();
 
-        // Append to settings panel (right column for UI extensions)
+        // Append to settings panel
         $("#extensions_settings2").append(settingsHtml);
 
         // Bind events
@@ -164,25 +193,12 @@ jQuery(async () => {
         // Load saved settings
         loadSettings();
 
-        // Register the prompt injection
-        // We use the imported extension_prompt_types
-        if (extension_prompt_types) {
-            // Remove old injection if exists to prevent duplicates on reload
-            const existingIndex = extension_prompt_types.findIndex(e => e.name === extensionName);
-            if (existingIndex !== -1) {
-                extension_prompt_types.splice(existingIndex, 1);
-            }
-
-            extension_prompt_types.push({
-                name: extensionName,
-                value: constructPrompt,
-                position: extension_settings[extensionName]?.injection_position || "after_story",
-                order: 100,
-                separator: "\n\n"
-            });
-            console.log(`[${extensionName}] Injection logic registered.`);
+        // Register Event Listener for Injection
+        if (eventSource) {
+            eventSource.on('chat_completion_payload_ready', onChatCompletionPayloadReady);
+            console.log(`[${extensionName}] Event listener registered: chat_completion_payload_ready`);
         } else {
-            console.warn(`[${extensionName}] extension_prompt_types could not be imported! Injection will not work.`);
+            console.error(`[${extensionName}] eventSource not found! Injection will not work.`);
         }
 
         console.log(`[${extensionName}] ✅ Loaded successfully`);
