@@ -274,19 +274,31 @@ function jumpToSelection() {
         textarea.focus();
         textarea.setSelectionRange(start, end);
 
-        // Calculate dynamic line height more robustly
-        // The scrollHeight/totalLines method is unreliable, so we measure actual font height
+        // Calculate line height robustly
+        // First try to get computed lineHeight
+        const computedStyle = window.getComputedStyle(textarea);
+        let computedLineHeight = parseFloat(computedStyle.lineHeight);
         let lineHeight = 20; // Default fallback
-        const tempDiv = document.createElement('div');
-        tempDiv.style.font = window.getComputedStyle(textarea).font;
-        tempDiv.style.visibility = 'hidden';
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.top = '-9999px';
-        tempDiv.innerHTML = 'A'; // Single line of text
-        document.body.appendChild(tempDiv);
-        lineHeight = tempDiv.clientHeight || 20;
-        document.body.removeChild(tempDiv);
+
+        if (!isNaN(computedLineHeight) && computedLineHeight > 0) {
+            lineHeight = computedLineHeight;
+        } else {
+            // If lineHeight is "normal" or not set, explicitly set it to a standard value
+            textarea.style.lineHeight = '18px';
+
+            // Measure using temporary div with same font and line-height
+            const tempDiv = document.createElement('div');
+            tempDiv.style.font = computedStyle.font;
+            tempDiv.style.lineHeight = '18px';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px';
+            tempDiv.style.top = '-9999px';
+            tempDiv.innerHTML = 'A';
+            document.body.appendChild(tempDiv);
+            lineHeight = tempDiv.clientHeight || 18;
+            document.body.removeChild(tempDiv);
+        }
 
         // Calculate line numbers
         const beforeText = textarea.value.substring(0, start);
