@@ -418,6 +418,17 @@ jQuery(async () => {
         $("#protagonist_name").on("input", onInput);
         $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
+        $("#undo_selection_btn").on("click", undoSelection);
+        $("#jump_to_selection_btn").on("click", jumpToSelection);
+
+        // Bind selection event
+        $("#source_text").on("mouseup keyup", onTextSelect);
+
+        // Load saved settings
+        loadSettings();
+
+        // Initial injection refresh
+        refreshInjection();
 
         // Register event listeners
         eventSource.on(event_types.MESSAGE_RECEIVED, refreshInjection);
