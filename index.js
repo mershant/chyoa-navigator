@@ -17,6 +17,7 @@ const defaultSettings = {
     ooc_post: "</simulate>\n\nYOUR JOB: Simulate the sequence above in third-person perspective, ensuring ALL listed events occur. {{user}}'s input may modify WHO is involved or add contextual details, but the CORE EVENTS must still happen. Pay special attention to small details like objects being examined, internal thoughts being expressed through actions, and the pacing described.",
     modification_text: "",
     separate_protagonist: false,
+    isekai_mode: false,
     protagonist_name: "",
     injection_depth: 4
 };
@@ -71,6 +72,7 @@ async function loadSettings() {
     $("#ooc_post").val(extension_settings[extensionName].ooc_post || defaultSettings.ooc_post);
     $("#modification_text").val(extension_settings[extensionName].modification_text || "");
     $("#separate_protagonist").prop("checked", extension_settings[extensionName].separate_protagonist || false);
+    $("#isekai_mode").prop("checked", extension_settings[extensionName].isekai_mode || false);
     $("#protagonist_name").val(extension_settings[extensionName].protagonist_name || "");
     $("#injection_depth").val(extension_settings[extensionName].injection_depth || 4);
 
@@ -97,6 +99,7 @@ function refreshUI() {
     $("#ooc_post").prop("disabled", !enabled);
     $("#modification_text").prop("disabled", !enabled);
     $("#separate_protagonist").prop("disabled", !enabled);
+    $("#isekai_mode").prop("disabled", !enabled);
     $("#injection_depth").prop("disabled", !enabled);
     $("#test_injection_btn").prop("disabled", !enabled);
 
@@ -158,14 +161,24 @@ function onInput(event) {
     if (id === 'source_text') {
         // Per-chat: source text
         setChatMetadata('source_text', value);
-    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'separate_protagonist' || id === 'protagonist_name' || id === 'injection_depth') {
+    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'separate_protagonist' || id === 'protagonist_name' || id === 'injection_depth' || id === 'isekai_mode') {
         // Global settings
         extension_settings[extensionName][id] = value;
+
+        // Mutual exclusivity logic
+        if (id === 'separate_protagonist' && value === true) {
+            extension_settings[extensionName]['isekai_mode'] = false;
+            $("#isekai_mode").prop("checked", false);
+        } else if (id === 'isekai_mode' && value === true) {
+            extension_settings[extensionName]['separate_protagonist'] = false;
+            $("#separate_protagonist").prop("checked", false);
+        }
+
         saveSettingsDebounced();
     }
 
-    // Update UI when separate_protagonist changes
-    if (id === 'separate_protagonist') {
+    // Update UI when toggles change
+    if (id === 'separate_protagonist' || id === 'isekai_mode') {
         refreshUI();
     }
 
@@ -321,6 +334,15 @@ function constructPrompt() {
         prompt += "- {{user}} may be present as a secondary character or observer.";
     }
 
+    // 6. Isekai Mode (User Replaces Protagonist)
+    if (settings.isekai_mode) {
+        prompt += `\n[ISEKAI MODE ACTIVE: {{user}} has replaced the protagonist]`;
+        prompt += `\n- ROLE: You are the Game Master. Guide {{user}} through the Source Text's events.`;
+        prompt += `\n- AGENCY: {{user}} has FREE WILL. Do NOT speak/act for them.`;
+        prompt += `\n- THE NUDGE: To signal the canon path, describe strong internal urges, instincts, or 'gut feelings' that pull {{user}} toward the Source Text's choices (e.g., "You feel a burning compulsion to...", "Your instincts scream at you to...").`;
+        prompt += `\n- ADAPTATION: If {{user}} resists the nudge, do NOT force them. Instead, adapt the world/NPCs to steer the plot back to the Source Text's outcome naturally.`;
+    }
+
     // Close with bracket
     prompt += "\n]";
 
@@ -392,6 +414,7 @@ jQuery(async () => {
         $("#ooc_post").on("input", onInput);
         $("#modification_text").on("input", onInput);
         $("#separate_protagonist").on("input", onInput);
+        $("#isekai_mode").on("input", onInput);
         $("#protagonist_name").on("input", onInput);
         $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
