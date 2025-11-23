@@ -274,201 +274,167 @@ function jumpToSelection() {
         textarea.focus();
         textarea.setSelectionRange(start, end);
 
-        // Calculate line height robustly
-        // First try to get computed lineHeight
-        const computedStyle = window.getComputedStyle(textarea);
-        let computedLineHeight = parseFloat(computedStyle.lineHeight);
-        let lineHeight = 20; // Default fallback
-
-        if (!isNaN(computedLineHeight) && computedLineHeight > 0) {
-            lineHeight = computedLineHeight;
-        } else {
-            // If lineHeight is "normal" or not set, explicitly set it to a standard value
-            textarea.style.lineHeight = '18px';
-
-            // Measure using temporary div with same font and line-height
-            const tempDiv = document.createElement('div');
-            tempDiv.style.font = computedStyle.font;
-            tempDiv.style.lineHeight = '18px';
-            tempDiv.style.visibility = 'hidden';
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.left = '-9999px';
-            tempDiv.style.top = '-9999px';
-            tempDiv.innerHTML = 'A';
-            document.body.appendChild(tempDiv);
-            lineHeight = tempDiv.clientHeight || 18;
-            document.body.removeChild(tempDiv);
-        }
-
+        // Use character position for scroll ratio (works better than line count)
+        const totalChars = textarea.value.length;
+        const scrollRatio = end / totalChars;
+        const maxScroll = textarea.scrollHeight - textarea.clientHeight;
+        // Position so the end of selection is visible with some context after it
+        // Scroll to about 15% before the end of selection
+        const targetScrollRatio = Math.max(0, scrollRatio - 0.15);
+        const targetScroll = targetScrollRatio * maxScroll;
+        textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
+        
         // Calculate line numbers for display
         const beforeText = textarea.value.substring(0, start);
         const startLine = beforeText.split('\n').length;
         const selectedLines = selectedText.split('\n').length;
         const endLine = startLine + selectedLines - 1;
-
-        // Use a more reliable scrolling method
-        // Calculate approximate character position to scroll to
-        const linesBeforeEnd = textarea.value.substring(0, end).split('\n').length;
-        const totalLines = textarea.value.split('\n').length;
-
-        // Calculate scroll position as a ratio
-        const scrollRatio = linesBeforeEnd / totalLines;
-        const maxScroll = textarea.scrollHeight - textarea.clientHeight;
-
-        // Position so the end of selection is visible with some context after it
-        // Scroll to about 30% past the end line
-        const targetScrollRatio = Math.max(0, scrollRatio - 0.15);
-        const targetScroll = targetScrollRatio * maxScroll;
-
-        textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
-
-        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, scrollRatio: ${scrollRatio.toFixed(2)}, targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
-
-        toastr.info('Jumped to selection');
+        
+        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, char ${end}/${totalChars} (${(scrollRatio*100).toFixed(1)}%), targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
     }
 }
 
-// Construct the prompt to be injected
+// Calculate line numbers for display
 function constructPrompt() {
-    const settings = extension_settings[extensionName];
+            const settings = extension_settings[extensionName];
 
-    // Try to get selected text from chat metadata first, fallback to extension settings
-    let selectedText = getChatMetadata('selected_text', '');
-    if (!selectedText) {
-        selectedText = settings.selected_text || '';
-    }
+            // Try to get selected text from chat metadata first, fallback to extension settings
+            let selectedText = getChatMetadata('selected_text', '');
+            if (!selectedText) {
+                selectedText = settings.selected_text || '';
+            }
 
-    if (!settings || !selectedText) {
-        return "";
-    }
+            if (!settings || !selectedText) {
+                return "";
+            }
 
-    let prompt = "";
+            let prompt = "";
 
-    // 1. Pre-Prompt (OOC1)
-    prompt += settings.ooc_pre + "\n";
+            // 1. Pre-Prompt (OOC1)
+            prompt += settings.ooc_pre + "\n";
 
-    // 2. Selected Text wrapped in simulate tags
-    prompt += selectedText + "\n";
+            // 2. Selected Text wrapped in simulate tags
+            prompt += selectedText + "\n";
 
-    // 3. Post-Prompt (OOC2)
-    prompt += settings.ooc_post + "\n";
+            // 3. Post-Prompt (OOC2)
+            prompt += settings.ooc_post + "\n";
 
-    // 4. Manual Modifications
-    if (settings.modification_text) {
-        prompt += settings.modification_text + "\n";
-    }
+            // 4. Manual Modifications
+            if (settings.modification_text) {
+                prompt += settings.modification_text + "\n";
+            }
 
-    // 5. Toggles
-    if (settings.separate_protagonist) {
-        const protagonistName = settings.protagonist_name || "the protagonist";
-        prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
-        prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
-        prompt += "- {{user}} may be present as a secondary character or observer.";
-    }
+            // 5. Toggles
+            if (settings.separate_protagonist) {
+                const protagonistName = settings.protagonist_name || "the protagonist";
+                prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
+                prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
+                prompt += "- {{user}} may be present as a secondary character or observer.";
+            }
 
-    // 6. Isekai Mode (User Replaces Protagonist)
-    if (settings.isekai_mode) {
-        prompt += `\n[ISEKAI MODE ACTIVE: {{user}} has replaced the protagonist]`;
-        prompt += `\n- ROLE: You are the Game Master. Guide {{user}} through the Source Text's events.`;
-        prompt += `\n- AGENCY: {{user}} has FREE WILL. Do NOT speak/act for them.`;
-        prompt += `\n- THE NUDGE: To signal the canon path, describe strong internal urges, instincts, or 'gut feelings' that pull {{user}} toward the Source Text's choices (e.g., "You feel a burning compulsion to...", "Your instincts scream at you to...").`;
-        prompt += `\n- ADAPTATION: If {{user}} resists the nudge, do NOT force them. Instead, adapt the world/NPCs to steer the plot back to the Source Text's outcome naturally.`;
-    }
+            // 6. Isekai Mode (User Replaces Protagonist)
+            if (settings.isekai_mode) {
+                prompt += `\n[ISEKAI MODE ACTIVE: {{user}} has replaced the protagonist]`;
+                prompt += `\n- ROLE: You are the Game Master. Guide {{user}} through the Source Text's events.`;
+                prompt += `\n- AGENCY: {{user}} has FREE WILL. Do NOT speak/act for them.`;
+                prompt += `\n- THE NUDGE: To signal the canon path, describe strong internal urges, instincts, or 'gut feelings' that pull {{user}} toward the Source Text's choices (e.g., "You feel a burning compulsion to...", "Your instincts scream at you to...").`;
+                prompt += `\n- ADAPTATION: If {{user}} resists the nudge, do NOT force them. Instead, adapt the world/NPCs to steer the plot back to the Source Text's outcome naturally.`;
+            }
 
-    // Close with bracket
-    prompt += "\n]";
+            // Close with bracket
+            prompt += "\n]";
 
-    return prompt;
-}
+            return prompt;
+        }
 
-// Refresh the injection using setExtensionPrompt
-function refreshInjection() {
-    const ctx = getContext();
-    const prompt = constructPrompt();
-    const settings = extension_settings[extensionName];
+        // Refresh the injection using setExtensionPrompt
+        function refreshInjection() {
+            const ctx = getContext();
+            const prompt = constructPrompt();
+            const settings = extension_settings[extensionName];
 
-    if (prompt && isEnabled()) {
-        console.log(`[${extensionName}] Injecting prompt (${prompt.length} chars)`);
-        console.log(`[${extensionName}] Prompt preview:`, prompt.substring(0, 100) + "...");
+            if (prompt && isEnabled()) {
+                console.log(`[${extensionName}] Injecting prompt (${prompt.length} chars)`);
+                console.log(`[${extensionName}] Prompt preview:`, prompt.substring(0, 100) + "...");
 
-        ctx.setExtensionPrompt(
-            extensionName,
-            prompt,
-            extension_prompt_types.IN_PROMPT,
-            settings.injection_depth || 4,
-            false,
-            'system'
-        );
-    } else {
-        console.log(`[${extensionName}] Clearing injection (disabled or no text selected)`);
-        ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.IN_PROMPT, 0, false, 'system');
-    }
-}
+                ctx.setExtensionPrompt(
+                    extensionName,
+                    prompt,
+                    extension_prompt_types.IN_PROMPT,
+                    settings.injection_depth || 4,
+                    false,
+                    'system'
+                );
+            } else {
+                console.log(`[${extensionName}] Clearing injection (disabled or no text selected)`);
+                ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.IN_PROMPT, 0, false, 'system');
+            }
+        }
 
-// Test button handler
-function onTestInjection() {
-    const prompt = constructPrompt();
-    if (prompt) {
-        console.log(`[${extensionName}] TEST INJECTION RESULT:\n`, prompt);
-        alert("Prompt generated! Check the Browser Console (F12) to see the full injected text.");
-    } else {
-        alert("No prompt generated. Make sure the extension is enabled and you have text selected.");
-    }
-}
+        // Test button handler
+        function onTestInjection() {
+            const prompt = constructPrompt();
+            if (prompt) {
+                console.log(`[${extensionName}] TEST INJECTION RESULT:\n`, prompt);
+                alert("Prompt generated! Check the Browser Console (F12) to see the full injected text.");
+            } else {
+                alert("No prompt generated. Make sure the extension is enabled and you have text selected.");
+            }
+        }
 
-// Handle chat change event
-function onChatChanged() {
-    console.log(`[${extensionName}] Chat changed, reloading settings...`);
-    loadSettings();
-    refreshInjection();
-}
+        // Handle chat change event
+        function onChatChanged() {
+            console.log(`[${extensionName}] Chat changed, reloading settings...`);
+            loadSettings();
+            refreshInjection();
+        }
 
-// Extension initialization
-jQuery(async () => {
-    console.log(`[${extensionName}] Loading...`);
+        // Extension initialization
+        jQuery(async () => {
+            console.log(`[${extensionName}] Loading...`);
 
-    try {
-        // Load HTML from file
-        const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
+            try {
+                // Load HTML from file
+                const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
 
-        // Remove existing drawer if present
-        $("#chyoa-navigator-drawer").remove();
-        $(".chyoa-navigator-settings").remove();
-        $(".story-modifier-settings").remove();
+                // Remove existing drawer if present
+                $("#chyoa-navigator-drawer").remove();
+                $(".chyoa-navigator-settings").remove();
+                $(".story-modifier-settings").remove();
 
-        // Append to settings panel
-        $("#extensions_settings2").append(settingsHtml);
+                // Append to settings panel
+                $("#extensions_settings2").append(settingsHtml);
 
-        // Bind events
-        $("#enable_toggle").on("change", toggleEnabled);
-        $("#source_text").on("input", onInput);
-        $("#ooc_pre").on("input", onInput);
-        $("#ooc_post").on("input", onInput);
-        $("#modification_text").on("input", onInput);
-        $("#separate_protagonist").on("input", onInput);
-        $("#isekai_mode").on("input", onInput);
-        $("#protagonist_name").on("input", onInput);
-        $("#injection_depth").on("input", onInput);
-        $("#test_injection_btn").on("click", onTestInjection);
-        $("#undo_selection_btn").on("click", undoSelection);
-        $("#jump_to_selection_btn").on("click", jumpToSelection);
+                // Bind events
+                $("#enable_toggle").on("change", toggleEnabled);
+                $("#source_text").on("input", onInput);
+                $("#ooc_pre").on("input", onInput);
+                $("#ooc_post").on("input", onInput);
+                $("#modification_text").on("input", onInput);
+                $("#separate_protagonist").on("input", onInput);
+                $("#isekai_mode").on("input", onInput);
+                $("#protagonist_name").on("input", onInput);
+                $("#injection_depth").on("input", onInput);
+                $("#test_injection_btn").on("click", onTestInjection);
+                $("#undo_selection_btn").on("click", undoSelection);
+                $("#jump_to_selection_btn").on("click", jumpToSelection);
 
-        // Bind selection event
-        $("#source_text").on("mouseup keyup", onTextSelect);
+                // Bind selection event
+                $("#source_text").on("mouseup keyup", onTextSelect);
 
-        // Load saved settings
-        loadSettings();
+                // Load saved settings
+                loadSettings();
 
-        // Initial injection refresh
-        refreshInjection();
+                // Initial injection refresh
+                refreshInjection();
 
-        // Register event listeners
-        eventSource.on(event_types.MESSAGE_RECEIVED, refreshInjection);
-        eventSource.on(event_types.MESSAGE_SENT, refreshInjection);
-        eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
+                // Register event listeners
+                eventSource.on(event_types.MESSAGE_RECEIVED, refreshInjection);
+                eventSource.on(event_types.MESSAGE_SENT, refreshInjection);
+                eventSource.on(event_types.CHAT_CHANGED, onChatChanged);
 
-        console.log(`[${extensionName}] ✅ Loaded successfully`);
-    } catch (error) {
-        console.error(`[${extensionName}] ❌ Failed to load:`, error);
-    }
-});
+                console.log(`[${extensionName}] ✅ Loaded successfully`);
+            } catch (error) {
+                console.error(`[${extensionName}] ❌ Failed to load:`, error);
+            }
+        });
