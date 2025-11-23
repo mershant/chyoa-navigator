@@ -27,21 +27,65 @@
                 <textarea id="ooc_pre" class="text_pole" rows="3"
                     placeholder="[OOC1: Below is the scenario...]"></textarea>
             </div>
+            <div id="chyoa-navigator-drawer" class="chyoa-navigator-settings">
+                <div class="inline-drawer">
+                    <div class="inline-drawer-toggle inline-drawer-header">
+                        <b>Story Modifier</b>
+                        <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+                    </div>
+                    <div class="inline-drawer-content">
+                        <!-- Source Text Area -->
+                        <div style="margin-bottom: 10px;">
+                            <label for="source_text">Source Text (Full Chapter)</label>
+                            <textarea id="source_text" class="text_pole" rows="10"
+                                placeholder="Paste the full story/chapter here..."></textarea>
+                            <small>Highlight the part you want to rewrite.</small>
+                        </div>
 
-            <div style="margin-bottom: 10px;">
-                <label for="ooc_post">Post-Prompt (OOC2)</label>
-                <textarea id="ooc_post" class="text_pole" rows="3" placeholder="[OOC2: Your job is to...]"></textarea>
+                        <!-- Selection Preview -->
+                        <div style="margin-bottom: 10px; padding: 5px; border: 1px solid #444; background: #222;">
+                            <label>Selected for Rewrite:</label>
+                            <div id="selection_preview"
+                                style="font-style: italic; color: #aaa; max-height: 100px; overflow-y: auto; white-space: pre-wrap;">
+                                (No text selected)</div>
+                        </div>
+
+                        <!-- OOC Settings -->
+                        <div style="margin-bottom: 10px;">
+                            <label for="ooc_pre">Pre-Prompt (OOC1)</label>
+                            <textarea id="ooc_pre" class="text_pole" rows="3"
+                                placeholder="[OOC1: Below is the scenario...]"></textarea>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <label for="ooc_post">Post-Prompt (OOC2)</label>
+                            <textarea id="ooc_post" class="text_pole" rows="3"
+                                placeholder="[OOC2: Your job is to...]"></textarea>
+                        </div>
+
+                        <!-- Toggles -->
+                        <div style="margin-bottom: 10px;">
+                            <label class="checkbox_label">
+                                <input id="separate_protagonist" type="checkbox" />
+                                The protagonist is separate from {{user}}
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom: 10px; border-top: 1px solid #444; padding-top: 10px;">
+                            <label for="injection_position">Injection Position (Order)</label>
+                            <select id="injection_position" class="text_pole">
+                                <option value="after_story">After Story (Default)</option>
+                                <option value="before_story">Before Story</option>
+                                <option value="after_char">After Character Def</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom: 10px;">
+                            <button id="test_injection_btn" class="menu_button">Test Injection (Check Console)</button>
+                        </div>
+
+
+                        <p><small>Selection is auto-saved.</small></p>
+                    </div>
+                </div>
             </div>
-
-            <!-- Toggles -->
-            <div style="margin-bottom: 10px;">
-                <label class="checkbox_label">
-                    <input id="separate_protagonist" type="checkbox" />
-                    The protagonist is separate from {{user}}
-                </label>
-            </div>
-
-            <p><small>Selection is auto-saved.</small></p>
-        </div>
-    </div>
-</div>
