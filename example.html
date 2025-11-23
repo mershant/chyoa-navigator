@@ -20,12 +20,12 @@
                 <label for="source_text">Source Text (Full Chapter)</label>
                 <textarea id="source_text" class="text_pole" rows="10"
                     placeholder="Paste the full story/chapter here..."></textarea>
-                <small>Highlight the part you want to rewrite.</small>
+                <small>Highlight the part you want to simulate.</small>
             </div>
 
             <!-- Selection Preview -->
             <div style="margin-bottom: 10px; padding: 5px; border: 1px solid #444; background: #222;">
-                <label>Selected for Rewrite:</label>
+                <label>Selected for Simulation:</label>
                 <div id="selection_preview"
                     style="font-style: italic; color: #aaa; max-height: 100px; overflow-y: auto; white-space: pre-wrap;">
                     (No text selected)</div>
@@ -51,10 +51,17 @@
                 </label>
             </div>
 
+            <div style="margin-bottom: 10px;">
+                <label class="checkbox_label">
+                    <input id="preserve_dialogue" type="checkbox" />
+                    Preserve original dialogue verbatim
+                </label>
+            </div>
+
             <!-- Injection Depth -->
             <div style="margin-bottom: 10px; border-top: 1px solid #444; padding-top: 10px;">
                 <label for="injection_depth">Injection Depth (messages from end)</label>
-                <input id="injection_depth" type="number" class="text_pole" min="0" value="1" />
+                <input id="injection_depth" type="number" class="text_pole" min="0" value="4" />
                 <small>0 = at the very end, 1 = before last message, etc.</small>
             </div>
 
@@ -63,7 +70,7 @@
                 <button id="test_injection_btn" class="menu_button">Test Injection (Check Console)</button>
             </div>
 
-            <p><small>Selection is auto-saved.</small></p>
+            <p><small>Selection is auto-saved per-chat.</small></p>
         </div>
     </div>
 </div>

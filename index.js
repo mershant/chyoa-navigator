@@ -14,6 +14,7 @@ const defaultSettings = {
     ooc_post: "</simulate>\n\nYOUR JOB: Simulate the sequence above in third-person perspective, ensuring ALL listed events occur. {{user}}'s input may modify WHO is involved or add contextual details, but the CORE EVENTS must still happen. Pay special attention to small details like objects being examined, internal thoughts being expressed through actions, and the pacing described.",
     modification_text: "",
     separate_protagonist: false,
+    preserve_dialogue: false,
     injection_depth: 4
 };
 
@@ -62,11 +63,17 @@ async function loadSettings() {
         Object.assign(extension_settings[extensionName], defaultSettings);
     }
 
+    // FORCE UPDATE: Always update prompts to latest defaults
+    extension_settings[extensionName].ooc_pre = defaultSettings.ooc_pre;
+    extension_settings[extensionName].ooc_post = defaultSettings.ooc_post;
+    saveSettingsDebounced();
+
     // Load global settings into UI
-    $("#ooc_pre").val(extension_settings[extensionName].ooc_pre || defaultSettings.ooc_pre);
-    $("#ooc_post").val(extension_settings[extensionName].ooc_post || defaultSettings.ooc_post);
+    $("#ooc_pre").val(extension_settings[extensionName].ooc_pre);
+    $("#ooc_post").val(extension_settings[extensionName].ooc_post);
     $("#modification_text").val(extension_settings[extensionName].modification_text || "");
     $("#separate_protagonist").prop("checked", extension_settings[extensionName].separate_protagonist || false);
+    $("#preserve_dialogue").prop("checked", extension_settings[extensionName].preserve_dialogue || false);
     $("#injection_depth").val(extension_settings[extensionName].injection_depth || 4);
 
     // Load per-chat data
@@ -92,6 +99,7 @@ function refreshUI() {
     $("#ooc_post").prop("disabled", !enabled);
     $("#modification_text").prop("disabled", !enabled);
     $("#separate_protagonist").prop("disabled", !enabled);
+    $("#preserve_dialogue").prop("disabled", !enabled);
     $("#injection_depth").prop("disabled", !enabled);
     $("#test_injection_btn").prop("disabled", !enabled);
 
@@ -123,7 +131,7 @@ function onInput(event) {
     if (id === 'source_text') {
         // Per-chat: source text
         setChatMetadata('source_text', value);
-    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'separate_protagonist' || id === 'injection_depth') {
+    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'separate_protagonist' || id === 'preserve_dialogue' || id === 'injection_depth') {
         // Global settings
         extension_settings[extensionName][id] = value;
         saveSettingsDebounced();
@@ -184,6 +192,10 @@ function constructPrompt() {
     if (settings.separate_protagonist) {
         prompt += "\n- The protagonist of the story in the given perspective is a character separate from {{user}}.\n";
         prompt += "- {{user}} may be present as a secondary character or observer.";
+    }
+
+    if (settings.preserve_dialogue) {
+        prompt += "\n- Preserve ALL original dialogue verbatim from the sequence.";
     }
 
     // Close with bracket
@@ -257,6 +269,7 @@ jQuery(async () => {
         $("#ooc_post").on("input", onInput);
         $("#modification_text").on("input", onInput);
         $("#separate_protagonist").on("input", onInput);
+        $("#preserve_dialogue").on("input", onInput);
         $("#injection_depth").on("input", onInput);
         $("#test_injection_btn").on("click", onTestInjection);
 
