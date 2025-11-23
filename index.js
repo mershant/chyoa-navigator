@@ -300,22 +300,29 @@ function jumpToSelection() {
             document.body.removeChild(tempDiv);
         }
 
-        // Calculate line numbers
+        // Calculate line numbers for display
         const beforeText = textarea.value.substring(0, start);
         const startLine = beforeText.split('\n').length;
         const selectedLines = selectedText.split('\n').length;
         const endLine = startLine + selectedLines - 1;
 
-        // Position the END of selection near the top of viewport (1/3 down)
-        // This lets you see both the end of your selection and what comes next
-        const textareaHeight = textarea.clientHeight;
+        // Use a more reliable scrolling method
+        // Calculate approximate character position to scroll to
+        const linesBeforeEnd = textarea.value.substring(0, end).split('\n').length;
+        const totalLines = textarea.value.split('\n').length;
 
-        // Convert line number (1-indexed) to pixel position (0-indexed)
-        const endLinePixelPosition = (endLine - 1) * lineHeight;
+        // Calculate scroll position as a ratio
+        const scrollRatio = linesBeforeEnd / totalLines;
+        const maxScroll = textarea.scrollHeight - textarea.clientHeight;
 
-        // Scroll so the END of selection appears 1/3 down from the top
-        const targetScroll = endLinePixelPosition - (textareaHeight / 3);
-        textarea.scrollTop = Math.max(0, targetScroll);
+        // Position so the end of selection is visible with some context after it
+        // Scroll to about 30% past the end line
+        const targetScrollRatio = Math.max(0, scrollRatio - 0.15);
+        const targetScroll = targetScrollRatio * maxScroll;
+
+        textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
+
+        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, scrollRatio: ${scrollRatio.toFixed(2)}, targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
 
         toastr.info('Jumped to selection');
     }
