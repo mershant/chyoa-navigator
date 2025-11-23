@@ -87,9 +87,7 @@ function constructPrompt() {
     // 1. Pre-Prompt (OOC1)
     prompt += settings.ooc_pre + "\n";
 
-    // 2. Selected Text wrapped in rewrite tags (already in OOC1/2 defaults but let's be safe)
-    // The user's default OOC1 ends with <rewrite>, OOC2 starts with </rewrite>
-    // So we just sandwich the text.
+    // 2. Selected Text wrapped in rewrite tags
     prompt += settings.selected_text + "\n";
 
     // 3. Post-Prompt (OOC2)
@@ -105,7 +103,7 @@ function constructPrompt() {
         prompt += "- The protagonist of the story in the given perspective is a character separate from {{user}}.\n";
     }
 
-    // Close the OOC2 block (assuming user didn't close it in the text area)
+    // Close the OOC2 block
     prompt += "]";
 
     return prompt;
@@ -119,8 +117,10 @@ jQuery(async () => {
         // Load HTML from file
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
 
-        // Remove existing drawer if present to prevent duplicates
-        $(".chyoa-navigator-settings").remove();
+        // Remove existing drawer if present to prevent duplicates (using ID for safety)
+        $("#chyoa-navigator-drawer").remove();
+        $(".chyoa-navigator-settings").remove(); // Fallback
+        $(".story-modifier-settings").remove(); // Cleanup old versions
 
         // Append to settings panel (right column for UI extensions)
         $("#extensions_settings2").append(settingsHtml);
@@ -129,7 +129,7 @@ jQuery(async () => {
         $("#source_text").on("input", onInput);
         $("#ooc_pre").on("input", onInput);
         $("#ooc_post").on("input", onInput);
-        $("#modification_text").on("input", onInput); // Ensure this exists in HTML if not already
+        $("#modification_text").on("input", onInput);
         $("#separate_protagonist").on("input", onInput);
 
         // Bind selection event
@@ -139,13 +139,11 @@ jQuery(async () => {
         loadSettings();
 
         // Register the prompt injection
-        // We use extension_prompt_types to inject at depth 1 (or user defined)
-        // This is a standard SillyTavern extension capability
         if (typeof extension_prompt_types !== "undefined") {
             extension_prompt_types.push({
                 name: extensionName,
                 value: constructPrompt,
-                position: "after_story", // Inject after the story context (depth 1 usually)
+                position: "after_story",
                 order: 100,
                 separator: "\n\n"
             });
