@@ -8,6 +8,12 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 console.log(`[${extensionName}] Script loaded! Checking for HTML at ${extensionFolderPath}/example.html`);
 
+// DIAGNOSTICS
+console.log(`[${extensionName}] Checking APIs:`);
+console.log(`[${extensionName}] extension_prompt_types type:`, typeof extension_prompt_types);
+console.log(`[${extensionName}] window.extension_prompt_types type:`, typeof window.extension_prompt_types);
+console.log(`[${extensionName}] eventSource type:`, typeof eventSource);
+
 // Default settings
 const defaultSettings = {
     source_text: "",
