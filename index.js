@@ -1,5 +1,5 @@
 // Import from SillyTavern core
-import { extension_settings, getContext, loadExtensionSettings, extension_prompt_types } from "../../../extensions.js";
+import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../script.js";
 
 // Extension name MUST match folder name
