@@ -120,7 +120,7 @@ jQuery(async () => {
         const settingsHtml = await $.get(`${extensionFolderPath}/example.html`);
 
         // Remove existing drawer if present to prevent duplicates
-        $(".story-modifier-settings").remove();
+        $(".chyoa-navigator-settings").remove();
 
         // Append to settings panel (right column for UI extensions)
         $("#extensions_settings2").append(settingsHtml);
