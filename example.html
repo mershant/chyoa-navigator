@@ -41,8 +41,10 @@
                     </button>
                 </div>
                 <div style="margin-top: 5px; border-top: 1px dashed #444; padding-top: 5px;">
-                    <div id="manual_paste_toggle" style="cursor: pointer; color: #aaa; font-size: 0.9em; user-select: none;">
-                        <span>▶ Manual Selection (Paste Text)</span>
+                    <!-- Increased padding and touch target size for mobile -->
+                    <div id="manual_paste_toggle" style="cursor: pointer; color: #aaa; font-size: 0.9em; user-select: none; padding: 10px 0; display: flex; align-items: center; width: 100%;">
+                        <span style="font-size: 1.2em; margin-right: 5px;">▶</span>
+                        <span>Manual Selection (Paste Text)</span>
                     </div>
                     <div id="manual_paste_container" style="display: none; margin-top: 5px;">
                         <textarea id="manual_paste_input" class="text_pole" rows="3"

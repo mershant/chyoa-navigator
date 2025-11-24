@@ -259,8 +259,21 @@ function undoSelection() {
 }
 
 // Toggle for manual paste container
-function toggleManualPaste() {
-    $("#manual_paste_container").slideToggle(200);
+function toggleManualPaste(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const container = $("#manual_paste_container");
+    const toggle = $("#manual_paste_toggle span:first-child");
+    
+    if (container.is(":visible")) {
+        container.slideUp(200);
+        toggle.text("▶"); // Right arrow
+    } else {
+        container.slideDown(200);
+        toggle.text("▼"); // Down arrow
+    }
 }
 
 // Find and select text from manual paste input
@@ -497,8 +510,8 @@ function constructPrompt() {
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
-                // Manual paste binding
-                $("#manual_paste_toggle").on("click", toggleManualPaste);
+                // Manual paste binding - bind to both click and touchstart for mobile responsiveness
+                $("#manual_paste_toggle").on("click touchstart", toggleManualPaste);
                 $("#manual_paste_btn").on("click", findAndSelectPasted);
 
                 // Bind selection event
