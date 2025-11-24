@@ -258,7 +258,7 @@ function undoSelection() {
     refreshInjection();
 }
 
-// Find and select text from manual paste input
+// Find and select text from manual paste input - Mobile compatible version
 function findAndSelectPasted(e) {
     // Prevent default to stop ghost clicks or form submission
     if (e) {
@@ -281,98 +281,117 @@ function findAndSelectPasted(e) {
     
     const sourceText = textarea.value;
     
-    // First, try standard find
-    let index = sourceText.indexOf(pastedText);
+    // Mobile-compatible text search with better whitespace handling
+    let index = -1;
+    let matchedLength = 0;
     
-    // If that fails, attempt aggressive normalization (handling mobile whitespace issues)
-    if (index === -1) {
-        // Replace all whitespace variants (including newlines) with a single space
-        // Mobile copy sometimes converts newlines to spaces or adds non-breaking spaces
-        const cleanPaste = pastedText.replace(/\s+/g, ' ').trim();
-        const cleanSource = sourceText.replace(/\s+/g, ' ');
+    // First, try exact match
+    index = sourceText.indexOf(pastedText);
+    if (index !== -1) {
+        matchedLength = pastedText.length;
+    } else {
+        // Mobile-friendly text matching with flexible whitespace handling
+        // This handles cases where mobile copy/paste changes whitespace characters
+        const normalizedPaste = pastedText.replace(/\s+/g, '\\s+').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        // Note: This mapping is approximate, but often sufficient for simple finding
-        // A more robust way would be to search for the sequence of words regardless of whitespace
-        
-        // Split paste into word tokens
-        const words = cleanPaste.split(' ');
-        
-        // Try to find the first few words to locate general area
-        // This is a simple heuristic: find where the first chunk of text lives
-        if (words.length > 0) {
-            // Construct a regex that allows any whitespace between words
-            // Escape regex chars in words first
-            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const pattern = words.map(escapeRegExp).join('\\s+');
+        try {
+            // Create regex that matches the text with flexible whitespace
+            const regex = new RegExp(normalizedPaste, 'i'); // case insensitive for better matching
+            const match = sourceText.match(regex);
             
-            try {
-                const regex = new RegExp(pattern);
-                const match = sourceText.match(regex);
-                if (match) {
-                    index = match.index;
-                    // Adjust pastedText length to match the *actual* matched formatting in source
-                    // This ensures selection covers the full range even if source has linebreaks
-                    // that paste didn't have (or vice versa)
-                    // Wait, we can't just update pastedText, we need 'end' index
-                    // match[0] contains the fully matched string from source
-                    // So we use match[0].length
+            if (match) {
+                index = match.index;
+                matchedLength = match[0].length;
+            } else {
+                // Fallback: try word-by-word matching for mobile copy issues
+                const words = pastedText.trim().split(/\s+/);
+                if (words.length > 0) {
+                    // Find the first occurrence of the first few words
+                    const searchText = words.slice(0, Math.min(3, words.length)).join('\\s+');
+                    const wordRegex = new RegExp(searchText, 'i');
+                    const wordMatch = sourceText.match(wordRegex);
+                    
+                    if (wordMatch) {
+                        index = wordMatch.index;
+                        // Try to find the full text around this position
+                        const searchRadius = Math.min(500, sourceText.length - index);
+                        const searchArea = sourceText.substring(index, index + searchRadius);
+                        
+                        // Find the best match in the search area
+                        const areaMatch = searchArea.match(new RegExp(normalizedPaste, 'i'));
+                        if (areaMatch) {
+                            matchedLength = areaMatch[0].length;
+                        } else {
+                            // Use the word match length as fallback
+                            matchedLength = wordMatch[0].length;
+                        }
+                    }
                 }
-            } catch (e) {
-                console.error("Regex build failed", e);
             }
+        } catch (error) {
+            console.error("Text search error:", error);
         }
     }
 
-    if (index !== -1) {
-        // Determine end index. If we used regex, we need the match length.
-        // Re-run match to get length if we did simple index finding, or used regex?
-        // Simplification: Just check the length of what we searched for, but that might be wrong if whitespace differs.
-        // Let's do a substring match confirmation if implicit.
-        
-        // If we found it via indexOf:
-        let length = pastedText.length;
-        
-        // If we found it via regex (index !== -1 but sourceText.indexOf failed)
-        if (sourceText.indexOf(pastedText) === -1) {
-             // We need to find the *actual* string length in source at that index
-             // Approximate: just take matched length if we had the match object.
-             // Let's re-run logic cleanly.
-             const cleanPaste = pastedText.replace(/\s+/g, ' ').trim();
-             const words = cleanPaste.split(' ');
-             const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-             const pattern = words.map(escapeRegExp).join('\\s+');
-             const regex = new RegExp(pattern);
-             const match = sourceText.match(regex);
-             if (match) {
-                 length = match[0].length;
-             }
-        }
-
+    if (index !== -1 && matchedLength > 0) {
         const start = index;
-        const end = index + length;
+        const end = index + matchedLength;
         
         // Update metadata immediately so the extension knows, even if visual selection fails
-        setChatMetadata('selected_text', sourceText.substring(start, end));
+        const selectedText = sourceText.substring(start, end);
+        setChatMetadata('selected_text', selectedText);
         setChatMetadata('selection_start', start);
         setChatMetadata('selection_end', end);
-        updateSelectionPreview(sourceText.substring(start, end));
+        updateSelectionPreview(selectedText);
 
-        // Attempt visual selection with a slight delay to handle mobile focus quirks
-        textarea.focus();
-        setTimeout(() => {
-            textarea.setSelectionRange(start, end);
-            // Scroll to it using existing logic
-            jumpToSelection();
-        }, 100);
+        // Mobile-compatible text selection with proper focus handling
+        const performSelection = () => {
+            try {
+                // Ensure textarea is visible and focused
+                textarea.focus();
+                
+                // Mobile browsers need a small delay for focus to take effect
+                setTimeout(() => {
+                    try {
+                        textarea.setSelectionRange(start, end);
+                        
+                        // Additional mobile scroll handling
+                        setTimeout(() => {
+                            jumpToSelection();
+                            
+                            // Mobile-specific: ensure selection is visible after keyboard appears
+                            if ('ontouchstart' in window) {
+                                setTimeout(() => {
+                                    const rect = textarea.getBoundingClientRect();
+                                    if (rect.top < 0 || rect.bottom > window.innerHeight) {
+                                        textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }
+                                }, 300);
+                            }
+                        }, 50);
+                    } catch (selectionError) {
+                        console.warn("Selection failed, but metadata was saved:", selectionError);
+                        toastr.info("Text found and saved. Selection may not be visible on mobile.");
+                    }
+                }, 100);
+                
+                toastr.success("Text selected!");
+                $("#manual_paste_input").val(""); // Clear input
+                
+            } catch (focusError) {
+                console.warn("Focus failed, but selection was saved:", focusError);
+                toastr.info("Text found and saved. Manual focus may be needed on mobile.");
+            }
+        };
         
-        toastr.success("Text selected!");
-        $("#manual_paste_input").val(""); // Clear input
+        // Execute selection
+        performSelection();
     } else {
-         toastr.error("Text not found. Try copying a smaller chunk.");
+        toastr.error("Text not found. Try copying a smaller chunk or check for formatting differences.");
     }
 }
 
-// Jump to selection - scroll to current selection in textarea
+// Jump to selection - scroll to current selection in textarea (Mobile compatible)
 function jumpToSelection() {
     const start = getChatMetadata('selection_start', 0);
     const end = getChatMetadata('selection_end', 0);
@@ -385,47 +404,84 @@ function jumpToSelection() {
 
     const textarea = document.getElementById('source_text');
     if (textarea) {
+        // Mobile-friendly focus and selection
         textarea.focus();
-        textarea.setSelectionRange(start, end);
+        
+        // Set selection with error handling for mobile
+        try {
+            textarea.setSelectionRange(start, end);
+        } catch (error) {
+            console.warn("Selection range setting failed:", error);
+            // Continue anyway - the metadata is still saved
+        }
 
-        // Use a more reliable scrolling method for text with no line breaks
-        // Create a temporary span to measure the pixel position of the selection
-        const tempDiv = document.createElement('div');
-        tempDiv.style.cssText = `
-            position: absolute;
-            left: -9999px;
-            top: -9999px;
-            width: ${textarea.clientWidth}px;
-            font: ${window.getComputedStyle(textarea).font};
-            line-height: ${window.getComputedStyle(textarea).lineHeight};
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        `;
+        // Mobile-compatible scrolling
+        const scrollToSelection = () => {
+            try {
+                // Method 1: Use scrollIntoView for mobile browsers
+                if ('ontouchstart' in window) {
+                    // For mobile, use scrollIntoView with better options
+                    const element = textarea;
+                    const scrollContainer = element.parentElement || document.documentElement;
+                    
+                    // Calculate approximate position
+                    const linesBefore = textarea.value.substring(0, start).split('\n').length;
+                    const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+                    const targetScrollTop = Math.max(0, (linesBefore - 3) * lineHeight);
+                    
+                    // Smooth scroll for modern browsers
+                    if ('scrollBehavior' in document.documentElement.style) {
+                        textarea.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+                    } else {
+                        textarea.scrollTop = targetScrollTop;
+                    }
+                } else {
+                    // Method 2: Original pixel-based calculation for desktop
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.cssText = `
+                        position: absolute;
+                        left: -9999px;
+                        top: -9999px;
+                        width: ${textarea.clientWidth}px;
+                        font: ${window.getComputedStyle(textarea).font};
+                        line-height: ${window.getComputedStyle(textarea).lineHeight};
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        overflow-wrap: break-word;
+                    `;
+                    
+                    const beforeSelection = textarea.value.substring(0, end);
+                    tempDiv.textContent = beforeSelection;
+                    document.body.appendChild(tempDiv);
+                    
+                    const pixelHeight = tempDiv.offsetHeight;
+                    document.body.removeChild(tempDiv);
+                    
+                    const maxScroll = textarea.scrollHeight - textarea.clientHeight;
+                    const targetScroll = Math.max(0, pixelHeight - (textarea.clientHeight / 2));
+                    
+                    textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
+                }
+                
+                // Calculate line numbers for display
+                const beforeText = textarea.value.substring(0, start);
+                const startLine = beforeText.split('\n').length;
+                const selectedLines = selectedText.split('\n').length;
+                const endLine = startLine + selectedLines - 1;
+                
+                console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}`);
+                
+            } catch (scrollError) {
+                console.warn("Scroll failed:", scrollError);
+                // Fallback: simple scroll to top of selection area
+                const linesBefore = textarea.value.substring(0, start).split('\n').length;
+                const lineHeight = 20;
+                textarea.scrollTop = Math.max(0, (linesBefore - 5) * lineHeight);
+            }
+        };
         
-        // Split text into before selection and selection
-        const beforeSelection = textarea.value.substring(0, end);
-        tempDiv.textContent = beforeSelection;
-        document.body.appendChild(tempDiv);
-        
-        // Get the pixel height of the text before the selection end
-        const pixelHeight = tempDiv.offsetHeight;
-        document.body.removeChild(tempDiv);
-        
-        // Calculate scroll position to center the selection
-        const maxScroll = textarea.scrollHeight - textarea.clientHeight;
-        // Position so the selection is centered in the viewport
-        const targetScroll = Math.max(0, pixelHeight - (textarea.clientHeight / 2));
-        
-        textarea.scrollTop = Math.max(0, Math.min(maxScroll, targetScroll));
-        
-        // Calculate line numbers for display
-        const beforeText = textarea.value.substring(0, start);
-        const startLine = beforeText.split('\n').length;
-        const selectedLines = selectedText.split('\n').length;
-        const endLine = startLine + selectedLines - 1;
-        
-        console.log(`[Jump Scroll Debug] Lines ${startLine}-${endLine}, pixelHeight: ${pixelHeight}, targetScroll: ${targetScroll.toFixed(0)}/${maxScroll.toFixed(0)}`);
+        // Delay scrolling slightly for mobile to ensure focus is complete
+        setTimeout(scrollToSelection, 150);
     }
 }
 
@@ -553,21 +609,31 @@ function constructPrompt() {
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
-                // Manual paste binding
-                // Adding touchstart for immediate mobile response, ensuring no double-fire via preventDefault in handler
-                $("#extensions_settings2").on("click touchstart", "#manual_paste_btn", findAndSelectPasted);
-
-                // Bind selection event
-                // We include 'selectionchange' on document to allow "live" updates while dragging on PC,
-                // which provides the "instant" feel the user requested.
-                $("#source_text").on("mouseup keyup", onTextSelect);
+                // Manual paste binding - Mobile compatible
+                // Use pointer events for better cross-device compatibility
+                $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
                 
+                // Mobile-specific: prevent default touch behavior that might interfere
+                $("#manual_paste_btn").on("touchstart", function(e) {
+                    e.preventDefault();
+                });
+
+                // Bind selection event - Mobile compatible
+                // Use input event for mobile text selection changes
+                $("#source_text").on("mouseup keyup input", onTextSelect);
+                
+                // Mobile selection tracking
+                let selectionTimeout;
                 document.addEventListener("selectionchange", () => {
                     const textarea = document.getElementById("source_text");
                     // Only process if the textarea is the active element to avoid capturing
                     // selections from other inputs (like manual paste box).
                     if (textarea && document.activeElement === textarea) {
-                        onTextSelect({ target: textarea });
+                        // Debounce selection changes on mobile to prevent excessive updates
+                        clearTimeout(selectionTimeout);
+                        selectionTimeout = setTimeout(() => {
+                            onTextSelect({ target: textarea });
+                        }, 100);
                     }
                 });
 

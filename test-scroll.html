@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Jump Scroll Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        #source_text {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            padding: 10px;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        .controls {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 8px 15px;
+            margin-right: 5px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #666;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+
+        #info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Jump Scroll Test</h2>
+    <textarea id="source_text" placeholder="Paste text here, then select some text..."></textarea>
+
+    <div class="controls">
+        <button onclick="captureSelection()">Capture Selection</button>
+        <button onclick="jumpToSelection()">Jump to Selection</button>
+        <button onclick="fillSampleText()">Fill Sample Text</button>
+    </div>
+
+    <div id="info">
+        <div id="selection_info">No selection captured</div>
+        <div id="debug_info" style="margin-top: 10px; color: #aaa;"></div>
+    </div>
+
+    <script>
+        let savedStart = 0;
+        let savedEnd = 0;
+        let savedText = '';
+
+        function fillSampleText() {
+            const lines = [];
+            for (let i = 1; i <= 100; i++) {
+                lines.push(`Line ${i}: This is some sample text to test scrolling behavior. Lorem ipsum dolor sit amet.`);
+            }
+            document.getElementById('source_text').value = lines.join('\n');
+        }
+
+        function captureSelection() {
+            const textarea = document.getElementById('source_text');
+            savedStart = textarea.selectionStart;
+            savedEnd = textarea.selectionEnd;
+            savedText = textarea.value.substring(savedStart, savedEnd);
+
+            if (savedStart === savedEnd) {
+                document.getElementById('selection_info').innerHTML = '<span style="color: #f88;">No text selected</span>';
+                return;
+            }
+
+            const beforeText = textarea.value.substring(0, savedStart);
+            const startLine = beforeText.split('\n').length;
+            const selectedLines = savedText.split('\n').length;
+            const endLine = startLine + selectedLines - 1;
+
+            document.getElementById('selection_info').innerHTML =
+                `Selected: chars ${savedStart}-${savedEnd} (${savedText.length} chars)<br>` +
+                `Lines ${startLine}-${endLine}`;
+        }
+
+        function jumpToSelection() {
+            if (!savedText) {
+                alert('No selection captured. Select text and click "Capture Selection" first.');
+                return;
+            }
+
+            const textarea = document.getElementById('source_text');
+            textarea.focus();
+            textarea.setSelectionRange(savedStart, savedEnd);
+
+            // Calculate dynamic line height
+            const totalLines = textarea.value.split('\n').length;
+            const lineHeight = (textarea.scrollHeight / totalLines) || 20;
+
+            // Calculate line numbers
+            const beforeText = textarea.value.substring(0, savedStart);
+            const startLine = beforeText.split('\n').length;
+            const selectedLines = savedText.split('\n').length;
+            const endLine = startLine + selectedLines - 1;
+
+            // CURRENT IMPLEMENTATION
+            const textareaHeight = textarea.clientHeight;
+            const endLinePixelPosition = (endLine - 1) * lineHeight;
+            const targetScroll = endLinePixelPosition - (textareaHeight / 3);
+
+            // Debug info
+            const debugInfo = `
+                <strong>Debug Info:</strong><br>
+                Total lines: ${totalLines}<br>
+                Line height: ${lineHeight.toFixed(2)}px<br>
+                Textarea height: ${textareaHeight}px<br>
+                Textarea scrollHeight: ${textarea.scrollHeight}px<br>
+                Start line: ${startLine}<br>
+                End line: ${endLine}<br>
+                End line pixel position: ${endLinePixelPosition.toFixed(2)}px<br>
+                Target scroll: ${targetScroll.toFixed(2)}px<br>
+                Actual scroll set to: ${Math.max(0, targetScroll).toFixed(2)}px
+            `;
+            document.getElementById('debug_info').innerHTML = debugInfo;
+
+            textarea.scrollTop = Math.max(0, targetScroll);
+
+            console.log('Scroll calculation:', {
+                lineHeight,
+                textareaHeight,
+                startLine,
+                endLine,
+                endLinePixelPosition,
+                targetScroll,
+                finalScroll: Math.max(0, targetScroll)
+            });
+        }
+
+        // Auto-fill on load for testing
+        window.onload = fillSampleText;
+    </script>
+</body>
+
+</html>

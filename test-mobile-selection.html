@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHYOA Navigator - Mobile Selection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background: #2a2a2a;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        button {
+            background: #4a4a4a;
+            color: #fff;
+            border: 1px solid #666;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5a5a5a;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .warning {
+            color: #FF9800;
+        }
+        .error {
+            color: #f44336;
+        }
+        .info {
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>CHYOA Navigator - Mobile Selection Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <p>This test page helps verify that the manual selection functionality works correctly on mobile devices.</p>
+        
+        <h3>Test Steps:</h3>
+        <ol>
+            <li>Copy some text from the "Source Text" area below</li>
+            <li>Paste it into the "Manual Paste Input" field</li>
+            <li>Click "Find & Select in Source"</li>
+            <li>The text should be highlighted in the source textarea</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Source Text</h2>
+        <textarea id="source_text" readonly>
+Once upon a time in a land far away, there lived a brave knight named Arthur. 
+He was known throughout the kingdom for his courage and wisdom.
+
+One day, a great dragon appeared and began terrorizing the villages. 
+The king called upon Arthur to save the kingdom.
+
+Arthur gathered his sword and shield, mounted his trusty steed, 
+and set off on his perilous journey to confront the dragon.
+
+After many days of travel, Arthur finally reached the dragon's lair. 
+The beast was enormous, with scales as hard as steel and breath of fire.
+        </textarea>
+    </div>
+
+    <div class="test-section">
+        <h2>Manual Selection Test</h2>
+        <label for="manual_paste_input">Paste text to find:</label>
+        <textarea id="manual_paste_input" placeholder="Paste the text you want to select here..."></textarea>
+        <button onclick="testSelection()">Find & Select in Source</button>
+        
+        <div id="test_result" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Mobile Compatibility Check</h2>
+        <div id="mobile_check">
+            <p>Checking device capabilities...</p>
+        </div>
+    </div>
+
+    <script>
+        function testSelection() {
+            const pastedText = document.getElementById('manual_paste_input').value;
+            const sourceText = document.getElementById('source_text');
+            const resultDiv = document.getElementById('test_result');
+            
+            if (!pastedText) {
+                resultDiv.innerHTML = '<span class="error">Please paste some text first</span>';
+                return;
+            }
+            
+            const sourceContent = sourceText.value;
+            const index = sourceContent.indexOf(pastedText);
+            
+            if (index !== -1) {
+                // Try to select the text
+                sourceText.focus();
+                sourceText.setSelectionRange(index, index + pastedText.length);
+                
+                resultDiv.innerHTML = '<span class="success">✓ Text found and selected successfully!</span>';
+                
+                // Scroll to selection
+                const linesBefore = sourceContent.substring(0, index).split('\n').length;
+                const lineHeight = 20;
+                sourceText.scrollTop = Math.max(0, (linesBefore - 3) * lineHeight);
+            } else {
+                resultDiv.innerHTML = '<span class="error">✗ Text not found. Try a smaller chunk.</span>';
+            }
+        }
+
+        // Mobile compatibility check
+        function checkMobileCompatibility() {
+            const checkDiv = document.getElementById('mobile_check');
+            const tests = [];
+            
+            // Test 1: Touch support
+            tests.push({
+                name: 'Touch Support',
+                result: 'ontouchstart' in window,
+                message: 'Device supports touch events'
+            });
+            
+            // Test 2: Text selection API
+            tests.push({
+                name: 'Text Selection API',
+                result: typeof document.createElement('textarea').setSelectionRange === 'function',
+                message: 'setSelectionRange is available'
+            });
+            
+            // Test 3: Focus management
+            tests.push({
+                name: 'Focus Management',
+                result: true, // Basic focus is always available
+                message: 'Element focus is supported'
+            });
+            
+            let html = '<ul>';
+            tests.forEach(test => {
+                const status = test.result ? 'success' : 'warning';
+                const icon = test.result ? '✓' : '⚠';
+                html += `<li class="${status}">${icon} ${test.name}: ${test.message}</li>`;
+            });
+            html += '</ul>';
+            
+            checkDiv.innerHTML = html;
+        }
+
+        // Run compatibility check on load
+        document.addEventListener('DOMContentLoaded', checkMobileCompatibility);
+    </script>
+</body>
+</html>
