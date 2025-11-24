@@ -491,18 +491,30 @@ function constructPrompt() {
                 $("#test_injection_btn").on("click", onTestInjection);
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
-                $("#manual_selection_btn").on("click", captureSelectionManually);
+                // Add touchstart to capture selection immediately on touch, before focus potentially blurs
+                $("#manual_selection_btn").on("click touchstart", captureSelectionManually);
 
                 // Bind selection event
-                // Add touchend for mobile support
-                $("#source_text").on("mouseup keyup touchend", onTextSelect);
+                // Add touchend/touchmove for mobile support
+                $("#source_text").on("mouseup keyup touchend touchmove", onTextSelect);
                 
                 // Also listen for selectionchange on document to catch handle dragging on mobile
+                // Relaxed check: we don't strictly require activeElement to be textarea,
+                // but we check if the textarea actually has a *new* selection.
                 document.addEventListener("selectionchange", () => {
                     const textarea = document.getElementById("source_text");
-                    if (document.activeElement === textarea) {
-                        // Create a synthetic event object since onTextSelect expects one with target
-                        onTextSelect({ target: textarea });
+                    // Only process if the textarea exists and actually has a selection interval
+                    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+                        // We filter inside onTextSelect to see if it changed,
+                        // so calling it frequently is okay (it checks for changes)
+                        // But to prevent random overwrites when selecting other things,
+                        // we should probably still care about focus, OR just let the manual button handle cases where focus is weird.
+                        
+                        // However, on mobile, activeElement might be the body or viewport during drag.
+                        // Let's rely on the manual button for edge cases, but upgrade the manual button.
+                        if (document.activeElement === textarea) {
+                             onTextSelect({ target: textarea });
+                        }
                     }
                 });
 
