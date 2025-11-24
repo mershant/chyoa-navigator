@@ -260,8 +260,11 @@ function undoSelection() {
 
 // Toggle for manual paste container
 function toggleManualPaste(e) {
-    // Prevent default to avoid any weird double-firing issues on mobile if it's a button
-    if (e) e.preventDefault();
+    // Prevent default and propagation to ensure the click stays here and doesn't trigger other UI behaviors
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     
     const container = $("#manual_paste_container");
     const toggle = $("#manual_paste_toggle span:first-child");
