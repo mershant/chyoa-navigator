@@ -259,20 +259,14 @@ function undoSelection() {
 }
 
 // Manual selection capture for mobile devices
-function captureSelectionManually(e) {
-    if (e) {
-        e.preventDefault(); // Prevent button from stealing focus
-        e.stopPropagation();
-    }
-
+function captureSelectionManually() {
     const textarea = document.getElementById('source_text');
     if (!textarea) {
         toastr.error('Source text area not found');
         return;
     }
 
-    // Do NOT call focus() here, as it might reset selection on some devices if focus was lost
-    // textarea.focus();
+    textarea.focus();
     
     // Get current selection from textarea
     const start = textarea.selectionStart;
@@ -497,8 +491,7 @@ function constructPrompt() {
                 $("#test_injection_btn").on("click", onTestInjection);
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
-                // Use mousedown/touchstart to capture selection before focus is lost
-                $("#manual_selection_btn").on("mousedown touchstart", captureSelectionManually);
+                $("#manual_selection_btn").on("click", captureSelectionManually);
 
                 // Bind selection event
                 $("#source_text").on("mouseup keyup", onTextSelect);
