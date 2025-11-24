@@ -258,27 +258,6 @@ function undoSelection() {
     refreshInjection();
 }
 
-// Toggle for manual paste container
-function toggleManualPaste(e) {
-    // Prevent default and propagation to ensure the click stays here and doesn't trigger other UI behaviors
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    const container = $("#manual_paste_container");
-    const toggle = $("#manual_paste_toggle span:first-child");
-    
-    // Toggle visibility without slideUp/Down to be snappier and avoid animation glitches on mobile
-    if (container.is(":visible")) {
-        container.hide();
-        toggle.text("▶"); // Right arrow
-    } else {
-        container.show();
-        toggle.text("▼"); // Down arrow
-    }
-}
-
 // Find and select text from manual paste input
 function findAndSelectPasted() {
     const pastedText = $("#manual_paste_input").val();
@@ -315,7 +294,7 @@ function findAndSelectPasted() {
         
         toastr.success("Text found and selected!");
         $("#manual_paste_input").val(""); // Clear input
-        $("#manual_paste_container").slideUp(); // Hide container
+        // We don't hide container anymore as per user request
     } else {
         // Try fuzzy match? (Strip whitespace?)
         const normalizedPaste = pastedText.replace(/\s+/g, ' ').trim();
@@ -514,9 +493,6 @@ function constructPrompt() {
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
                 // Manual paste binding
-                // Using delegated event binding for stability and avoiding double-fire (ghost clicks)
-                // We rely on standard 'click' which works on mobile taps too (just with slight delay, which is fine here)
-                $("#extensions_settings2").on("click", "#manual_paste_toggle", toggleManualPaste);
                 $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
