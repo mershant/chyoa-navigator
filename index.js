@@ -517,9 +517,18 @@ function constructPrompt() {
                 $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
-                // Revert to purely standard desktop events for auto-selection to prevent PC inconsistencies.
-                // Mobile users are now expected to use the Manual Paste tool if auto-select fails.
+                // We include 'selectionchange' on document to allow "live" updates while dragging on PC,
+                // which provides the "instant" feel the user requested.
                 $("#source_text").on("mouseup keyup", onTextSelect);
+                
+                document.addEventListener("selectionchange", () => {
+                    const textarea = document.getElementById("source_text");
+                    // Only process if the textarea is the active element to avoid capturing
+                    // selections from other inputs (like manual paste box).
+                    if (textarea && document.activeElement === textarea) {
+                        onTextSelect({ target: textarea });
+                    }
+                });
 
                 // Load saved settings
                 loadSettings();
