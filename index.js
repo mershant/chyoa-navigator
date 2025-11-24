@@ -11,6 +11,9 @@ console.log(`[${extensionName}] Script loaded!`);
 // Selection history for undo functionality (max 10 items)
 let selectionHistory = [];
 
+// Track the last valid selection to support mobile devices where focus is lost
+let lastKnownSelection = null;
+
 // Default settings (global - apply to all chats)
 const defaultSettings = {
     ooc_pre: "[SEQUENCE SIMULATION: The following text describes a MANDATORY sequence of events that MUST occur in the story. These events are NON-NEGOTIABLE and should happen in the order presented, but they may be adapted to incorporate {{user}}'s modifications (e.g., different characters, added details, new dialogue).\n\nPOINT OF INTEREST:\n<simulate>",
@@ -195,6 +198,14 @@ function onTextSelect(event) {
     if (start !== end) {
         const selectedText = textarea.value.substring(start, end);
 
+        // Update last known valid selection
+        lastKnownSelection = {
+            start: start,
+            end: end,
+            text: selectedText,
+            timestamp: Date.now()
+        };
+
         // Save current selection to history before updating (for undo)
         const currentSelection = getChatMetadata('selected_text', '');
         if (currentSelection && currentSelection !== selectedText) {
@@ -266,16 +277,35 @@ function captureSelectionManually() {
         return;
     }
 
-    textarea.focus();
-    
-    // Get current selection from textarea
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    
-    // Only update if there is a selection
-    if (start !== end) {
-        const selectedText = textarea.value.substring(start, end);
+    // Try to get current selection from textarea
+    let start = textarea.selectionStart;
+    let end = textarea.selectionEnd;
+    let selectedText = "";
+
+    // If no current selection, check if we have a tracked one
+    if (start === end && lastKnownSelection) {
+        console.log(`[${extensionName}] No active selection, attempting to restore last known selection...`);
+        // Verify the text content hasn't changed significantly since recording
+        const currentTextAtPosition = textarea.value.substring(lastKnownSelection.start, lastKnownSelection.end);
         
+        if (currentTextAtPosition === lastKnownSelection.text) {
+            start = lastKnownSelection.start;
+            end = lastKnownSelection.end;
+            selectedText = lastKnownSelection.text;
+            
+            // Restore visual selection if possible
+            textarea.focus();
+            textarea.setSelectionRange(start, end);
+            toastr.info("Restored last valid selection");
+        } else {
+             console.log(`[${extensionName}] Last known selection mismatch (text changed?)`);
+        }
+    } else if (start !== end) {
+        selectedText = textarea.value.substring(start, end);
+    }
+    
+    // Only update if we found a valid selection (either current or restored)
+    if (selectedText) {
         // Save current selection to history before updating (for undo)
         const currentSelection = getChatMetadata('selected_text', '');
         if (currentSelection && currentSelection !== selectedText) {
@@ -307,7 +337,7 @@ function captureSelectionManually() {
         // Refresh injection
         refreshInjection();
     } else {
-        toastr.warning('No text selected. Please highlight some text in the source text area first.');
+        toastr.warning('No text selected. Please highlight text in the source box.');
     }
 }
 
