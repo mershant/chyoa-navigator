@@ -260,19 +260,18 @@ function undoSelection() {
 
 // Toggle for manual paste container
 function toggleManualPaste(e) {
-    // We only need to prevent default if it's an anchor or similar, but div is fine.
-    // Removing aggressive preventDefault/stopPropagation to play nice with other scripts
-    // unless necessary.
+    // Prevent default to avoid any weird double-firing issues on mobile if it's a button
+    if (e) e.preventDefault();
     
     const container = $("#manual_paste_container");
     const toggle = $("#manual_paste_toggle span:first-child");
     
-    // Toggle visibility
+    // Toggle visibility without slideUp/Down to be snappier and avoid animation glitches on mobile
     if (container.is(":visible")) {
-        container.slideUp(200);
+        container.hide();
         toggle.text("▶"); // Right arrow
     } else {
-        container.slideDown(200);
+        container.show();
         toggle.text("▼"); // Down arrow
     }
 }
@@ -518,8 +517,9 @@ function constructPrompt() {
                 $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
-                // Revert to simple events as we now have manual paste fallback
-                $("#source_text").on("mouseup keyup touchend", onTextSelect);
+                // Revert to purely standard desktop events for auto-selection to prevent PC inconsistencies.
+                // Mobile users are now expected to use the Manual Paste tool if auto-select fails.
+                $("#source_text").on("mouseup keyup", onTextSelect);
 
                 // Load saved settings
                 loadSettings();

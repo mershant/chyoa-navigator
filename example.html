@@ -41,11 +41,11 @@
                     </button>
                 </div>
                 <div style="margin-top: 5px; border-top: 1px dashed #444; padding-top: 5px;">
-                    <!-- Increased padding and touch target size for mobile -->
-                    <div id="manual_paste_toggle" style="cursor: pointer; color: #aaa; font-size: 0.9em; user-select: none; padding: 10px 0; display: flex; align-items: center; width: 100%;">
-                        <span style="font-size: 1.2em; margin-right: 5px;">▶</span>
+                    <!-- Using button element ensures correct click behavior on all devices -->
+                    <button id="manual_paste_toggle" class="menu_button" style="background: none; border: none; text-align: left; padding: 10px 0; width: 100%; display: flex; align-items: center; color: #aaa; font-size: 0.9em;">
+                        <span style="font-size: 1.2em; margin-right: 5px; width: 15px; display: inline-block;">▶</span>
                         <span>Manual Selection (Paste Text)</span>
-                    </div>
+                    </button>
                     <div id="manual_paste_container" style="display: none; margin-top: 5px;">
                         <textarea id="manual_paste_input" class="text_pole" rows="3"
                             placeholder="Paste the text you want to select here..."></textarea>
