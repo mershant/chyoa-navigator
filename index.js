@@ -259,7 +259,13 @@ function undoSelection() {
 }
 
 // Find and select text from manual paste input
-function findAndSelectPasted() {
+function findAndSelectPasted(e) {
+    // Prevent default to stop ghost clicks or form submission
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
     const pastedText = $("#manual_paste_input").val();
     const textarea = document.getElementById('source_text');
     
@@ -493,7 +499,8 @@ function constructPrompt() {
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
                 // Manual paste binding
-                $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
+                // Adding touchstart for immediate mobile response, ensuring no double-fire via preventDefault in handler
+                $("#extensions_settings2").on("click touchstart", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
                 // We include 'selectionchange' on document to allow "live" updates while dragging on PC,
