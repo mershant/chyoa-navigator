@@ -40,13 +40,17 @@
                         ↶ Undo Selection
                     </button>
                 </div>
-                <div style="margin-top: 5px;">
-                    <button id="manual_selection_btn" class="menu_button" style="font-size: 0.9em; width: 100%;">
-                        📱 Capture Selection (Mobile)
-                    </button>
-                    <small style="display: block; margin-top: 3px; color: #aaa;">
-                        Use this if automatic selection doesn't work on mobile
-                    </small>
+                <div style="margin-top: 5px; border-top: 1px dashed #444; padding-top: 5px;">
+                    <div id="manual_paste_toggle" style="cursor: pointer; color: #aaa; font-size: 0.9em; user-select: none;">
+                        <span>▶ Manual Selection (Paste Text)</span>
+                    </div>
+                    <div id="manual_paste_container" style="display: none; margin-top: 5px;">
+                        <textarea id="manual_paste_input" class="text_pole" rows="3"
+                            placeholder="Paste the text you want to select here..."></textarea>
+                        <button id="manual_paste_btn" class="menu_button" style="margin-top: 5px; width: 100%;">
+                            Find & Select in Source
+                        </button>
+                    </div>
                 </div>
             </div>
 

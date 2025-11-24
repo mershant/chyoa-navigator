@@ -11,9 +11,6 @@ console.log(`[${extensionName}] Script loaded!`);
 // Selection history for undo functionality (max 10 items)
 let selectionHistory = [];
 
-// Track the last valid selection to support mobile devices where focus is lost
-let lastKnownSelection = null;
-
 // Default settings (global - apply to all chats)
 const defaultSettings = {
     ooc_pre: "[SEQUENCE SIMULATION: The following text describes a MANDATORY sequence of events that MUST occur in the story. These events are NON-NEGOTIABLE and should happen in the order presented, but they may be adapted to incorporate {{user}}'s modifications (e.g., different characters, added details, new dialogue).\n\nPOINT OF INTEREST:\n<simulate>",
@@ -198,14 +195,6 @@ function onTextSelect(event) {
     if (start !== end) {
         const selectedText = textarea.value.substring(start, end);
 
-        // Update last known valid selection
-        lastKnownSelection = {
-            start: start,
-            end: end,
-            text: selectedText,
-            timestamp: Date.now()
-        };
-
         // Save current selection to history before updating (for undo)
         const currentSelection = getChatMetadata('selected_text', '');
         if (currentSelection && currentSelection !== selectedText) {
@@ -269,75 +258,61 @@ function undoSelection() {
     refreshInjection();
 }
 
-// Manual selection capture for mobile devices
-function captureSelectionManually() {
+// Toggle for manual paste container
+function toggleManualPaste() {
+    $("#manual_paste_container").slideToggle(200);
+}
+
+// Find and select text from manual paste input
+function findAndSelectPasted() {
+    const pastedText = $("#manual_paste_input").val();
     const textarea = document.getElementById('source_text');
-    if (!textarea) {
-        toastr.error('Source text area not found');
+    
+    if (!pastedText) {
+        toastr.warning("Please paste some text first");
         return;
     }
-
-    // Try to get current selection from textarea
-    let start = textarea.selectionStart;
-    let end = textarea.selectionEnd;
-    let selectedText = "";
-
-    // If no current selection, check if we have a tracked one
-    if (start === end && lastKnownSelection) {
-        console.log(`[${extensionName}] No active selection, attempting to restore last known selection...`);
-        // Verify the text content hasn't changed significantly since recording
-        const currentTextAtPosition = textarea.value.substring(lastKnownSelection.start, lastKnownSelection.end);
-        
-        if (currentTextAtPosition === lastKnownSelection.text) {
-            start = lastKnownSelection.start;
-            end = lastKnownSelection.end;
-            selectedText = lastKnownSelection.text;
-            
-            // Restore visual selection if possible
-            textarea.focus();
-            textarea.setSelectionRange(start, end);
-            toastr.info("Restored last valid selection");
-        } else {
-             console.log(`[${extensionName}] Last known selection mismatch (text changed?)`);
-        }
-    } else if (start !== end) {
-        selectedText = textarea.value.substring(start, end);
+    
+    if (!textarea || !textarea.value) {
+        toastr.error("Source text is empty");
+        return;
     }
     
-    // Only update if we found a valid selection (either current or restored)
-    if (selectedText) {
-        // Save current selection to history before updating (for undo)
-        const currentSelection = getChatMetadata('selected_text', '');
-        if (currentSelection && currentSelection !== selectedText) {
-            const currentStart = getChatMetadata('selection_start', 0);
-            const currentEnd = getChatMetadata('selection_end', 0);
-
-            selectionHistory.push({
-                text: currentSelection,
-                start: currentStart,
-                end: currentEnd,
-                timestamp: Date.now()
-            });
-
-            // Keep only last 10 selections
-            if (selectionHistory.length > 10) {
-                selectionHistory.shift();
-            }
-        }
-
-        // Save new selection
-        setChatMetadata('selected_text', selectedText);
-        setChatMetadata('selection_start', start);
-        setChatMetadata('selection_end', end);
-        updateSelectionPreview(selectedText);
+    const sourceText = textarea.value;
+    const index = sourceText.indexOf(pastedText);
+    
+    if (index !== -1) {
+        // Match found!
+        const start = index;
+        const end = index + pastedText.length;
         
-        toastr.success(`Selection captured: ${selectedText.substring(0, 30)}${selectedText.length > 30 ? '...' : ''}`);
-        console.log(`[${extensionName}] Manual selection captured:`, selectedText.substring(0, 20) + "...");
+        // Select logic
+        textarea.focus();
+        textarea.setSelectionRange(start, end);
         
-        // Refresh injection
-        refreshInjection();
+        // Trigger save logic manually
+        const event = { target: textarea };
+        onTextSelect(event);
+        
+        // Scroll to it using existing logic
+        jumpToSelection();
+        
+        toastr.success("Text found and selected!");
+        $("#manual_paste_input").val(""); // Clear input
+        $("#manual_paste_container").slideUp(); // Hide container
     } else {
-        toastr.warning('No text selected. Please highlight text in the source box.');
+        // Try fuzzy match? (Strip whitespace?)
+        const normalizedPaste = pastedText.replace(/\s+/g, ' ').trim();
+        const normalizedSource = sourceText.replace(/\s+/g, ' ');
+        
+        const fuzzyIndex = normalizedSource.indexOf(normalizedPaste);
+        
+        if (fuzzyIndex !== -1) {
+            toastr.warning("Exact match not found, but similar text exists. Try selecting manually in source.");
+            // We could try to map the fuzzy index back to real index, but that's complex.
+        } else {
+             toastr.error("Text not found in source text");
+        }
     }
 }
 
@@ -521,32 +496,14 @@ function constructPrompt() {
                 $("#test_injection_btn").on("click", onTestInjection);
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
-                // Add touchstart to capture selection immediately on touch, before focus potentially blurs
-                $("#manual_selection_btn").on("click touchstart", captureSelectionManually);
+                
+                // Manual paste binding
+                $("#manual_paste_toggle").on("click", toggleManualPaste);
+                $("#manual_paste_btn").on("click", findAndSelectPasted);
 
                 // Bind selection event
-                // Add touchend/touchmove for mobile support
-                $("#source_text").on("mouseup keyup touchend touchmove", onTextSelect);
-                
-                // Also listen for selectionchange on document to catch handle dragging on mobile
-                // Relaxed check: we don't strictly require activeElement to be textarea,
-                // but we check if the textarea actually has a *new* selection.
-                document.addEventListener("selectionchange", () => {
-                    const textarea = document.getElementById("source_text");
-                    // Only process if the textarea exists and actually has a selection interval
-                    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-                        // We filter inside onTextSelect to see if it changed,
-                        // so calling it frequently is okay (it checks for changes)
-                        // But to prevent random overwrites when selecting other things,
-                        // we should probably still care about focus, OR just let the manual button handle cases where focus is weird.
-                        
-                        // However, on mobile, activeElement might be the body or viewport during drag.
-                        // Let's rely on the manual button for edge cases, but upgrade the manual button.
-                        if (document.activeElement === textarea) {
-                             onTextSelect({ target: textarea });
-                        }
-                    }
-                });
+                // Revert to simple events as we now have manual paste fallback
+                $("#source_text").on("mouseup keyup touchend", onTextSelect);
 
                 // Load saved settings
                 loadSettings();
