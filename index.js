@@ -260,13 +260,14 @@ function undoSelection() {
 
 // Toggle for manual paste container
 function toggleManualPaste(e) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+    // We only need to prevent default if it's an anchor or similar, but div is fine.
+    // Removing aggressive preventDefault/stopPropagation to play nice with other scripts
+    // unless necessary.
+    
     const container = $("#manual_paste_container");
     const toggle = $("#manual_paste_toggle span:first-child");
     
+    // Toggle visibility
     if (container.is(":visible")) {
         container.slideUp(200);
         toggle.text("▶"); // Right arrow
@@ -510,9 +511,11 @@ function constructPrompt() {
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
-                // Manual paste binding - bind to both click and touchstart for mobile responsiveness
-                $("#manual_paste_toggle").on("click touchstart", toggleManualPaste);
-                $("#manual_paste_btn").on("click", findAndSelectPasted);
+                // Manual paste binding
+                // Using delegated event binding for stability and avoiding double-fire (ghost clicks)
+                // We rely on standard 'click' which works on mobile taps too (just with slight delay, which is fine here)
+                $("#extensions_settings2").on("click", "#manual_paste_toggle", toggleManualPaste);
+                $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
                 // Revert to simple events as we now have manual paste fallback
