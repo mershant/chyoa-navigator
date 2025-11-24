@@ -494,7 +494,17 @@ function constructPrompt() {
                 $("#manual_selection_btn").on("click", captureSelectionManually);
 
                 // Bind selection event
-                $("#source_text").on("mouseup keyup", onTextSelect);
+                // Add touchend for mobile support
+                $("#source_text").on("mouseup keyup touchend", onTextSelect);
+                
+                // Also listen for selectionchange on document to catch handle dragging on mobile
+                document.addEventListener("selectionchange", () => {
+                    const textarea = document.getElementById("source_text");
+                    if (document.activeElement === textarea) {
+                        // Create a synthetic event object since onTextSelect expects one with target
+                        onTextSelect({ target: textarea });
+                    }
+                });
 
                 // Load saved settings
                 loadSettings();
