@@ -260,6 +260,8 @@ function undoSelection() {
 
 // Find and select text from manual paste input - Mobile compatible version
 function findAndSelectPasted(e) {
+    console.log(`[${extensionName}] Manual paste button clicked`, e ? e.type : 'no event');
+    
     // Prevent default to stop ghost clicks or form submission
     if (e) {
         e.preventDefault();
@@ -268,6 +270,8 @@ function findAndSelectPasted(e) {
 
     const pastedText = $("#manual_paste_input").val();
     const textarea = document.getElementById('source_text');
+    
+    console.log(`[${extensionName}] Pasted text length:`, pastedText ? pastedText.length : 0);
     
     if (!pastedText) {
         toastr.warning("Please paste some text first");
@@ -280,6 +284,7 @@ function findAndSelectPasted(e) {
     }
     
     const sourceText = textarea.value;
+    console.log(`[${extensionName}] Source text length:`, sourceText.length);
     
     // Mobile-compatible text search with better whitespace handling
     let index = -1;
@@ -289,7 +294,9 @@ function findAndSelectPasted(e) {
     index = sourceText.indexOf(pastedText);
     if (index !== -1) {
         matchedLength = pastedText.length;
+        console.log(`[${extensionName}] Exact match found at index:`, index);
     } else {
+        console.log(`[${extensionName}] No exact match, trying flexible matching`);
         // Mobile-friendly text matching with flexible whitespace handling
         // This handles cases where mobile copy/paste changes whitespace characters
         const normalizedPaste = pastedText.replace(/\s+/g, '\\s+').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -302,6 +309,7 @@ function findAndSelectPasted(e) {
             if (match) {
                 index = match.index;
                 matchedLength = match[0].length;
+                console.log(`[${extensionName}] Regex match found at index:`, index, "length:", matchedLength);
             } else {
                 // Fallback: try word-by-word matching for mobile copy issues
                 const words = pastedText.trim().split(/\s+/);
@@ -325,6 +333,7 @@ function findAndSelectPasted(e) {
                             // Use the word match length as fallback
                             matchedLength = wordMatch[0].length;
                         }
+                        console.log(`[${extensionName}] Word-based match found at index:`, index, "length:", matchedLength);
                     }
                 }
             }
@@ -339,14 +348,20 @@ function findAndSelectPasted(e) {
         
         // Update metadata immediately so the extension knows, even if visual selection fails
         const selectedText = sourceText.substring(start, end);
+        console.log(`[${extensionName}] Saving selection: start=${start}, end=${end}, text="${selectedText.substring(0, 50)}..."`);
+        
         setChatMetadata('selected_text', selectedText);
         setChatMetadata('selection_start', start);
         setChatMetadata('selection_end', end);
         updateSelectionPreview(selectedText);
+        
+        // Force refresh injection to ensure rewrite works
+        refreshInjection();
 
         // Mobile-compatible text selection with proper focus handling
         const performSelection = () => {
             try {
+                console.log(`[${extensionName}] Attempting visual selection...`);
                 // Ensure textarea is visible and focused
                 textarea.focus();
                 
@@ -354,6 +369,7 @@ function findAndSelectPasted(e) {
                 setTimeout(() => {
                     try {
                         textarea.setSelectionRange(start, end);
+                        console.log(`[${extensionName}] Selection range set successfully`);
                         
                         // Additional mobile scroll handling
                         setTimeout(() => {
@@ -375,7 +391,7 @@ function findAndSelectPasted(e) {
                     }
                 }, 100);
                 
-                toastr.success("Text selected!");
+                toastr.success("Text selected! Ready for rewrite.");
                 $("#manual_paste_input").val(""); // Clear input
                 
             } catch (focusError) {
@@ -387,6 +403,7 @@ function findAndSelectPasted(e) {
         // Execute selection
         performSelection();
     } else {
+        console.log(`[${extensionName}] Text not found in source`);
         toastr.error("Text not found. Try copying a smaller chunk or check for formatting differences.");
     }
 }
@@ -610,12 +627,11 @@ function constructPrompt() {
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
                 
                 // Manual paste binding - Mobile compatible
-                // Use pointer events for better cross-device compatibility
-                $("#extensions_settings2").on("click", "#manual_paste_btn", findAndSelectPasted);
-                
-                // Mobile-specific: prevent default touch behavior that might interfere
-                $("#manual_paste_btn").on("touchstart", function(e) {
+                // Use both click and touch events for maximum compatibility
+                $("#manual_paste_btn").on("click touchstart", function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
+                    findAndSelectPasted(e);
                 });
 
                 // Bind selection event - Mobile compatible
