@@ -258,6 +258,59 @@ function undoSelection() {
     refreshInjection();
 }
 
+// Manual selection capture for mobile devices
+function captureSelectionManually() {
+    const textarea = document.getElementById('source_text');
+    if (!textarea) {
+        toastr.error('Source text area not found');
+        return;
+    }
+
+    textarea.focus();
+    
+    // Get current selection from textarea
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    
+    // Only update if there is a selection
+    if (start !== end) {
+        const selectedText = textarea.value.substring(start, end);
+        
+        // Save current selection to history before updating (for undo)
+        const currentSelection = getChatMetadata('selected_text', '');
+        if (currentSelection && currentSelection !== selectedText) {
+            const currentStart = getChatMetadata('selection_start', 0);
+            const currentEnd = getChatMetadata('selection_end', 0);
+
+            selectionHistory.push({
+                text: currentSelection,
+                start: currentStart,
+                end: currentEnd,
+                timestamp: Date.now()
+            });
+
+            // Keep only last 10 selections
+            if (selectionHistory.length > 10) {
+                selectionHistory.shift();
+            }
+        }
+
+        // Save new selection
+        setChatMetadata('selected_text', selectedText);
+        setChatMetadata('selection_start', start);
+        setChatMetadata('selection_end', end);
+        updateSelectionPreview(selectedText);
+        
+        toastr.success(`Selection captured: ${selectedText.substring(0, 30)}${selectedText.length > 30 ? '...' : ''}`);
+        console.log(`[${extensionName}] Manual selection captured:`, selectedText.substring(0, 20) + "...");
+        
+        // Refresh injection
+        refreshInjection();
+    } else {
+        toastr.warning('No text selected. Please highlight some text in the source text area first.');
+    }
+}
+
 // Jump to selection - scroll to current selection in textarea
 function jumpToSelection() {
     const start = getChatMetadata('selection_start', 0);
@@ -438,6 +491,7 @@ function constructPrompt() {
                 $("#test_injection_btn").on("click", onTestInjection);
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
+                $("#manual_selection_btn").on("click", captureSelectionManually);
 
                 // Bind selection event
                 $("#source_text").on("mouseup keyup", onTextSelect);
