@@ -258,6 +258,120 @@ function undoSelection() {
     refreshInjection();
 }
 
+// Find and select text from manual paste input
+function findAndSelectPasted(e) {
+    // Prevent default to stop ghost clicks or form submission
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    const pastedText = $("#manual_paste_input").val();
+    const textarea = document.getElementById('source_text');
+    
+    if (!pastedText) {
+        toastr.warning("Please paste some text first");
+        return;
+    }
+    
+    if (!textarea || !textarea.value) {
+        toastr.error("Source text is empty");
+        return;
+    }
+    
+    const sourceText = textarea.value;
+    
+    // First, try standard find
+    let index = sourceText.indexOf(pastedText);
+    
+    // If that fails, attempt aggressive normalization (handling mobile whitespace issues)
+    if (index === -1) {
+        // Replace all whitespace variants (including newlines) with a single space
+        // Mobile copy sometimes converts newlines to spaces or adds non-breaking spaces
+        const cleanPaste = pastedText.replace(/\s+/g, ' ').trim();
+        const cleanSource = sourceText.replace(/\s+/g, ' ');
+        
+        // Note: This mapping is approximate, but often sufficient for simple finding
+        // A more robust way would be to search for the sequence of words regardless of whitespace
+        
+        // Split paste into word tokens
+        const words = cleanPaste.split(' ');
+        
+        // Try to find the first few words to locate general area
+        // This is a simple heuristic: find where the first chunk of text lives
+        if (words.length > 0) {
+            // Construct a regex that allows any whitespace between words
+            // Escape regex chars in words first
+            const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const pattern = words.map(escapeRegExp).join('\\s+');
+            
+            try {
+                const regex = new RegExp(pattern);
+                const match = sourceText.match(regex);
+                if (match) {
+                    index = match.index;
+                    // Adjust pastedText length to match the *actual* matched formatting in source
+                    // This ensures selection covers the full range even if source has linebreaks
+                    // that paste didn't have (or vice versa)
+                    // Wait, we can't just update pastedText, we need 'end' index
+                    // match[0] contains the fully matched string from source
+                    // So we use match[0].length
+                }
+            } catch (e) {
+                console.error("Regex build failed", e);
+            }
+        }
+    }
+
+    if (index !== -1) {
+        // Determine end index. If we used regex, we need the match length.
+        // Re-run match to get length if we did simple index finding, or used regex?
+        // Simplification: Just check the length of what we searched for, but that might be wrong if whitespace differs.
+        // Let's do a substring match confirmation if implicit.
+        
+        // If we found it via indexOf:
+        let length = pastedText.length;
+        
+        // If we found it via regex (index !== -1 but sourceText.indexOf failed)
+        if (sourceText.indexOf(pastedText) === -1) {
+             // We need to find the *actual* string length in source at that index
+             // Approximate: just take matched length if we had the match object.
+             // Let's re-run logic cleanly.
+             const cleanPaste = pastedText.replace(/\s+/g, ' ').trim();
+             const words = cleanPaste.split(' ');
+             const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+             const pattern = words.map(escapeRegExp).join('\\s+');
+             const regex = new RegExp(pattern);
+             const match = sourceText.match(regex);
+             if (match) {
+                 length = match[0].length;
+             }
+        }
+
+        const start = index;
+        const end = index + length;
+        
+        // Update metadata immediately so the extension knows, even if visual selection fails
+        setChatMetadata('selected_text', sourceText.substring(start, end));
+        setChatMetadata('selection_start', start);
+        setChatMetadata('selection_end', end);
+        updateSelectionPreview(sourceText.substring(start, end));
+
+        // Attempt visual selection with a slight delay to handle mobile focus quirks
+        textarea.focus();
+        setTimeout(() => {
+            textarea.setSelectionRange(start, end);
+            // Scroll to it using existing logic
+            jumpToSelection();
+        }, 100);
+        
+        toastr.success("Text selected!");
+        $("#manual_paste_input").val(""); // Clear input
+    } else {
+         toastr.error("Text not found. Try copying a smaller chunk.");
+    }
+}
+
 // Jump to selection - scroll to current selection in textarea
 function jumpToSelection() {
     const start = getChatMetadata('selection_start', 0);
@@ -403,7 +517,7 @@ function constructPrompt() {
             return prompt;
         }
 
-        // Refresh the injection using setExtensionPrompt
+        // Refresh the injection using setExtensionPrompt - Proper context injection
         function refreshInjection() {
             const ctx = getContext();
             const prompt = constructPrompt();
@@ -413,17 +527,16 @@ function constructPrompt() {
                 console.log(`[${extensionName}] Injecting prompt (${prompt.length} chars)`);
                 console.log(`[${extensionName}] Prompt preview:`, prompt.substring(0, 100) + "...");
 
+                // Proper context injection using IN_CHAT type for better integration
                 ctx.setExtensionPrompt(
                     extensionName,
                     prompt,
-                    extension_prompt_types.IN_PROMPT,
-                    settings.injection_depth || 4,
-                    false,
-                    'system'
+                    extension_prompt_types.IN_CHAT,
+                    settings.injection_depth || 4
                 );
             } else {
                 console.log(`[${extensionName}] Clearing injection (disabled or no text selected)`);
-                ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.IN_PROMPT, 0, false, 'system');
+                ctx.setExtensionPrompt(extensionName, "", extension_prompt_types.NONE, 0);
             }
         }
 
@@ -474,9 +587,24 @@ function constructPrompt() {
                 $("#test_injection_btn").on("click", onTestInjection);
                 $("#undo_selection_btn").on("click", undoSelection);
                 $("#jump_to_selection_btn").on("click", jumpToSelection);
+                
+                // Manual paste binding
+                // Adding touchstart for immediate mobile response, ensuring no double-fire via preventDefault in handler
+                $("#extensions_settings2").on("click touchstart", "#manual_paste_btn", findAndSelectPasted);
 
                 // Bind selection event
+                // We include 'selectionchange' on document to allow "live" updates while dragging on PC,
+                // which provides the "instant" feel the user requested.
                 $("#source_text").on("mouseup keyup", onTextSelect);
+                
+                document.addEventListener("selectionchange", () => {
+                    const textarea = document.getElementById("source_text");
+                    // Only process if the textarea is the active element to avoid capturing
+                    // selections from other inputs (like manual paste box).
+                    if (textarea && document.activeElement === textarea) {
+                        onTextSelect({ target: textarea });
+                    }
+                });
 
                 // Load saved settings
                 loadSettings();
