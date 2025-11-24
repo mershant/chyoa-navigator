@@ -351,18 +351,21 @@ function findAndSelectPasted(e) {
         const start = index;
         const end = index + length;
         
-        // Select logic
+        // Update metadata immediately so the extension knows, even if visual selection fails
+        setChatMetadata('selected_text', sourceText.substring(start, end));
+        setChatMetadata('selection_start', start);
+        setChatMetadata('selection_end', end);
+        updateSelectionPreview(sourceText.substring(start, end));
+
+        // Attempt visual selection with a slight delay to handle mobile focus quirks
         textarea.focus();
-        textarea.setSelectionRange(start, end);
+        setTimeout(() => {
+            textarea.setSelectionRange(start, end);
+            // Scroll to it using existing logic
+            jumpToSelection();
+        }, 100);
         
-        // Trigger save logic manually
-        const event = { target: textarea };
-        onTextSelect(event);
-        
-        // Scroll to it using existing logic
-        jumpToSelection();
-        
-        toastr.success("Text found and selected!");
+        toastr.success("Text selected!");
         $("#manual_paste_input").val(""); // Clear input
     } else {
          toastr.error("Text not found. Try copying a smaller chunk.");
