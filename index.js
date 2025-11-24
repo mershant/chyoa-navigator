@@ -59,7 +59,7 @@ function toggleEnabled() {
 }
 
 async function loadSettings() {
-    // Ensure global settings exist
+    // Ensure global settings exist (only for global settings)
     extension_settings[extensionName] = extension_settings[extensionName] || {};
 
     // Apply defaults for global settings if missing
@@ -71,17 +71,20 @@ async function loadSettings() {
     $("#ooc_pre").val(extension_settings[extensionName].ooc_pre || defaultSettings.ooc_pre);
     $("#ooc_post").val(extension_settings[extensionName].ooc_post || defaultSettings.ooc_post);
     $("#modification_text").val(extension_settings[extensionName].modification_text || "");
-    $("#separate_protagonist").prop("checked", extension_settings[extensionName].separate_protagonist || false);
-    $("#isekai_mode").prop("checked", extension_settings[extensionName].isekai_mode || false);
-    $("#protagonist_name").val(extension_settings[extensionName].protagonist_name || "");
     $("#injection_depth").val(extension_settings[extensionName].injection_depth || 4);
 
-    // Load per-chat data
+    // Load per-chat data (toggle settings and text data)
     const chatSourceText = getChatMetadata('source_text', '');
     const chatSelectedText = getChatMetadata('selected_text', '');
+    const chatSeparateProtagonist = getChatMetadata('separate_protagonist', false);
+    const chatIsekaiMode = getChatMetadata('isekai_mode', false);
+    const chatProtagonistName = getChatMetadata('protagonist_name', '');
 
     $("#source_text").val(chatSourceText);
     updateSelectionPreview(chatSelectedText);
+    $("#separate_protagonist").prop("checked", chatSeparateProtagonist);
+    $("#isekai_mode").prop("checked", chatIsekaiMode);
+    $("#protagonist_name").val(chatProtagonistName);
 
     // Update UI state
     refreshUI();
@@ -158,22 +161,21 @@ function onInput(event) {
     const value = type === "checkbox" ? event.target.checked : event.target.value;
 
     // Determine if this is a global or per-chat setting
-    if (id === 'source_text') {
-        // Per-chat: source text
-        setChatMetadata('source_text', value);
-    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'separate_protagonist' || id === 'protagonist_name' || id === 'injection_depth' || id === 'isekai_mode') {
-        // Global settings
-        extension_settings[extensionName][id] = value;
+    if (id === 'source_text' || id === 'separate_protagonist' || id === 'isekai_mode' || id === 'protagonist_name') {
+        // Per-chat settings
+        setChatMetadata(id, value);
 
-        // Mutual exclusivity logic
+        // Mutual exclusivity logic for per-chat settings
         if (id === 'separate_protagonist' && value === true) {
-            extension_settings[extensionName]['isekai_mode'] = false;
+            setChatMetadata('isekai_mode', false);
             $("#isekai_mode").prop("checked", false);
         } else if (id === 'isekai_mode' && value === true) {
-            extension_settings[extensionName]['separate_protagonist'] = false;
+            setChatMetadata('separate_protagonist', false);
             $("#separate_protagonist").prop("checked", false);
         }
-
+    } else if (id === 'ooc_pre' || id === 'ooc_post' || id === 'modification_text' || id === 'injection_depth') {
+        // Global settings
+        extension_settings[extensionName][id] = value;
         saveSettingsDebounced();
     }
 
@@ -504,44 +506,44 @@ function jumpToSelection() {
 
 // Calculate line numbers for display
 function constructPrompt() {
-            const settings = extension_settings[extensionName];
+            const globalSettings = extension_settings[extensionName];
 
-            // Try to get selected text from chat metadata first, fallback to extension settings
-            let selectedText = getChatMetadata('selected_text', '');
-            if (!selectedText) {
-                selectedText = settings.selected_text || '';
-            }
+            // Get per-chat settings from metadata
+            const selectedText = getChatMetadata('selected_text', '');
+            const separateProtagonist = getChatMetadata('separate_protagonist', false);
+            const isekaiMode = getChatMetadata('isekai_mode', false);
+            const protagonistName = getChatMetadata('protagonist_name', '');
 
-            if (!settings || !selectedText) {
+            if (!globalSettings || !selectedText) {
                 return "";
             }
 
             let prompt = "";
 
-            // 1. Pre-Prompt (OOC1)
-            prompt += settings.ooc_pre + "\n";
+            // 1. Pre-Prompt (OOC1) - Global
+            prompt += globalSettings.ooc_pre + "\n";
 
-            // 2. Selected Text wrapped in simulate tags
+            // 2. Selected Text wrapped in simulate tags - Per-chat
             prompt += selectedText + "\n";
 
-            // 3. Post-Prompt (OOC2)
-            prompt += settings.ooc_post + "\n";
+            // 3. Post-Prompt (OOC2) - Global
+            prompt += globalSettings.ooc_post + "\n";
 
-            // 4. Manual Modifications
-            if (settings.modification_text) {
-                prompt += settings.modification_text + "\n";
+            // 4. Manual Modifications - Global
+            if (globalSettings.modification_text) {
+                prompt += globalSettings.modification_text + "\n";
             }
 
-            // 5. Toggles
-            if (settings.separate_protagonist) {
-                const protagonistName = settings.protagonist_name || "the protagonist";
-                prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${protagonistName}".\n`;
+            // 5. Toggles - Per-chat
+            if (separateProtagonist) {
+                const name = protagonistName || "the protagonist";
+                prompt += `\n- The protagonist of the story in the given perspective is a character separate from {{user}}, referred to as "${name}".\n`;
                 prompt += "- Events happen to them following the source sequence, but {{user}} can experience it with/against them.\n";
                 prompt += "- {{user}} may be present as a secondary character or observer.";
             }
 
-            // 6. Isekai Mode (User Replaces Protagonist)
-            if (settings.isekai_mode) {
+            // 6. Isekai Mode (User Replaces Protagonist) - Per-chat
+            if (isekaiMode) {
                 prompt += `\n[ISEKAI MODE ACTIVE: {{user}} has replaced the protagonist]`;
                 prompt += `\n- ROLE: You are the Game Master. Guide {{user}} through the Source Text's events.`;
                 prompt += `\n- AGENCY: {{user}} has FREE WILL. Do NOT speak/act for them.`;
